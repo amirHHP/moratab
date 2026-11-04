@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moratab (مرتب) — Tab Manager</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="root" class="panel-root">
+    <header class="panel-header">
+      <div class="search-bar">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="Search tabs or enter URL/query..."
+          aria-label="Search tabs"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+      <button
+        type="button"
+        id="sortUrlBtn"
+        class="btn-sort"
+        aria-label="Sort tabs by URL"
+        title="Sort open tabs alphabetically by URL"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+          <path fill-rule="evenodd" d="M2.24 6.8a.75.75 0 001.06-.04l1.95-2.1v8.59a.75.75 0 001.5 0V4.66l1.95 2.1a.75.75 0 101.1-1.02l-3.25-3.5a.75.75 0 00-1.1 0L2.2 5.74a.75.75 0 00.04 1.06zm8 6.4a.75.75 0 00-.04 1.06l3.25 3.5a.75.75 0 001.1 0l3.25-3.5a.75.75 0 10-1.1-1.02l-1.95 2.1V6.75a.75.75 0 00-1.5 0v8.59l-1.95-2.1a.75.75 0 00-1.06-.04z" clip-rule="evenodd" />
+        </svg>
+        <span>Sort</span>
+      </button>
+    </header>
+
+    <main class="panel-content">
+      <section id="recentSection" class="tab-section" aria-label="Recent Tabs">
+        <h2 class="section-title">Recent Tabs</h2>
+        <ul id="recentList" class="tab-list" role="list"></ul>
+      </section>
+
+      <div id="sectionSeparator" class="separator" role="separator" aria-orientation="horizontal"></div>
+
+      <section id="remainingSection" class="tab-section" aria-label="Remaining Tabs">
+        <h2 class="section-title">Remaining Tabs</h2>
+        <ul id="remainingList" class="tab-list" role="list"></ul>
+      </section>
+
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🔍</div>
+        <p class="empty-title">No matching tabs</p>
+        <p class="empty-hint">Press <kbd>Enter</kbd> to search the web or navigate directly</p>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

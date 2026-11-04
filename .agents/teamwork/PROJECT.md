@@ -64,9 +64,9 @@ moratab/
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| T1 | E2E Testing Suite Track | Comprehensive opaque-box test suite (Tiers 1-4) derived from requirements; publishes `TEST_READY.md` and `test/e2e-runner.test.js` | None | IN_PROGRESS |
-| M1 | Core Pure Logic & Unit Tests | Pure algorithms in `src/utils.js`: tab URL sorting, LRU recents stack, token search filter, URL/query classifier, plus `test/utils.test.js` | None | IN_PROGRESS |
-| M2 | Extension UI & Chrome Integration | `manifest.json`, `background.js`, `icons/`, `sidepanel/` HTML/CSS/JS, live tab events, tab activation, browser tab move, fallback search, `README.md` | M1 | PLANNED |
+| T1 | E2E Testing Suite Track | Comprehensive opaque-box test suite (Tiers 1-4) derived from requirements; publishes `TEST_READY.md` and `test/e2e-runner.test.js` | None | DONE |
+| M1 | Core Pure Logic & Unit Tests | Pure algorithms in `src/utils.js`: tab URL sorting, LRU recents stack, token search filter, URL/query classifier, plus `test/utils.test.js` | None | DONE |
+| M2 | Extension UI & Chrome Integration | `manifest.json`, `background.js`, `icons/`, `sidepanel/` HTML/CSS/JS, live tab events, tab activation, browser tab move, fallback search, `README.md` | M1 | IN_PROGRESS |
 | M3 | Final Milestone & Verification | Pass 100% E2E test suite (Tiers 1-4), adversarial hardening (Tier 5), forensic integrity verification | T1, M2 | PLANNED |
 
 ---
