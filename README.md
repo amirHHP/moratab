@@ -17,9 +17,10 @@
   - Hover close button (`×`) allows closing individual tabs directly from the side panel.
 
 - **R2. Alphabetical URL Sorting**:
-  - One-click **Sort** button reorders actual browser tabs in the window alphabetically by URL.
-  - **Pinned-Tab Preservation**: Pinned tabs remain safely anchored in positions `0..k-1`; only unpinned tabs are sorted.
-  - **Re-entrancy Lock**: Employs an internal `isSorting` mutex to prevent infinite recursive event loops with `chrome.tabs.onMoved`.
+  - One-click **Sort** button toggles alphabetical URL sorting for the tabs listed within the Moratab side panel.
+  - **Browser Tab Safety**: Does **not** modify, move, or reorder actual open tabs in Google Chrome's tab strip.
+  - **Pinned-Tab Preservation**: Pinned tabs remain safely anchored at the top; only unpinned tabs are sorted.
+  - **Toggle & State Persistence**: Clicking Sort again restores the natural Chrome tab strip order; preference persists across side panel sessions.
 
 - **R3. Dynamic Recent Tabs & Visual Separator**:
   - Displays the 3 to 5 most recently accessed tabs above a prominent horizontal separator.
@@ -32,6 +33,18 @@
   - **Omnibox Fallback on Enter**: When 0 open tabs match:
     - If the input is a valid URL, bare domain (`example.com`), `localhost:port`, or IP address, navigates directly in a new tab.
     - If the input is a search query, executes a web search in a new tab using Chrome's default search engine (with Google search fallback).
+
+- **R5. AI-Powered Chrome Tab Bar Grouping (✨ AI Group)**:
+  - **Native Chrome Tab Bar Integration**: Uses Chrome's `chrome.tabs.group` and `chrome.tabGroups.update` APIs to automatically organize open tabs into native, colored tab groups directly inside the browser's top tab strip.
+  - **On-Device & Cloud AI Flexibility**:
+    - **Chrome Built-in AI**: Uses Chrome's Prompt API (Gemini Nano / Gemma) running 100% locally on-device with zero config.
+    - **Cloud AI (Google Gemini API)**: Connects with your free Google Gemini API key (`gemini-2.5-flash` / `gemini-1.5-flash`).
+    - **Local Ollama**: Supports local LLM endpoints (e.g., `gemma2` on `http://localhost:11434`).
+    - **Zero-Config Smart Heuristic Clusterer**: Automatic fallback that semantically clusters tabs by domain, keyword, and workflow, ensuring grouping ALWAYS succeeds immediately even offline or without an API key.
+  - **High-Quality Naming & Bilingual Support**: Automatically names groups in fluent Persian or English depending on tab content (e.g. *"برنامه‌نویسی و کد"*, *"سرویس‌های گوگل"*, *"هوش مصنوعی و پژوهش"* or *"Development & Code"*, *"AI & Research"*).
+  - **100% Tab Coverage Guarantee**: All tabs are strictly guaranteed to be assigned to a group. Pinned tabs can be automatically unpinned to ensure full grouping.
+  - **Side Panel Group Badges**: Displays colored group pills directly on tabs in the Moratab side panel.
+  - **AI Settings Dialog (⚙️)**: Easily customize provider, API key, model, language, and unpinning options.
 
 ---
 
@@ -50,8 +63,11 @@ moratab/
 │   ├── sidepanel.css          # Themeable stylesheet (dark/light mode)
 │   └── sidepanel.js           # Side panel controller & Chrome event integration
 ├── src/
-│   └── utils.js               # Pure algorithmic core (sorting, LRU, search, classifier)
+│   ├── utils.js               # Pure algorithmic core (sorting, LRU, search, classifier)
+│   └── ai-grouper.js          # On-device Gemma & Gemini AI tab bar grouper & clusterer
 ├── test/
+│   ├── ai-grouper.test.js     # Unit tests for AI prompt, reconciliation & clustering
+│   ├── sidepanel.test.js      # Controller unit tests (grouping, sorting, badges)
 │   ├── utils.test.js          # Unit tests (58 test cases, node:test)
 │   └── e2e-runner.test.js     # Opaque-box E2E test suite (126 test cases, node:test)
 ├── TEST_READY.md              # E2E test suite documentation
@@ -93,9 +109,11 @@ moratab/
 2. Pin one or two tabs (e.g., pin `https://github.com`).
 3. Click the **Sort** button in the Moratab header.
 4. Observe:
-   - Your pinned tab(s) remain firmly in place at the front of the tab strip.
-   - All unpinned tabs are reordered alphabetically by URL in the browser window (`apple.com` → `bbc.com` → `wikipedia.org`).
-   - The side panel list updates immediately to reflect the sorted order.
+   - Your actual Chrome browser tabs remain completely untouched in their original positions.
+   - Inside the Moratab side panel, the unpinned tabs in the list are reordered alphabetically by URL (`apple.com` → `bbc.com` → `wikipedia.org`), while pinned tabs remain at the top.
+   - The Sort button highlights (`.active`) to indicate that sorted view is enabled.
+5. Click the **Sort** button again:
+   - Observe that the side panel list toggles back to the natural tab order of the Chrome window.
 
 #### 3. Verifying R3 (Recent Tabs Section & Separator)
 1. Open at least 4 to 6 different tabs.

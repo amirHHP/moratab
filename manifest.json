@@ -1,14 +1,20 @@
 {
   "manifest_version": 3,
   "name": "Moratab - Side Panel Tab Manager",
-  "version": "1.0.0",
-  "description": "Organize tabs by URL, view recent tabs above a separator, and search open tabs with omnibox fallback.",
+  "version": "1.1.0",
+  "description": "Organize and group Chrome tabs with AI, view recent tabs above a separator, and search open tabs with omnibox fallback.",
   "permissions": [
     "sidePanel",
     "tabs",
+    "tabGroups",
     "favicon",
     "search",
     "storage"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "http://localhost:11434/*",
+    "http://127.0.0.1:11434/*"
   ],
   "action": {
     "default_title": "Open Moratab Tab Manager"

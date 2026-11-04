@@ -1,16 +1,21 @@
 /**
  * Moratab (مرتب) — Google Chrome Side Panel Controller
  *
- * Coordinates Chrome Tabs API, Side Panel DOM, real-time search filtering,
- * URL-based sorting with pinned tab preservation, and LRU recent tabs tracking.
+ * Coordinates Chrome Tabs API, Tab Groups API, Side Panel DOM, real-time search filtering,
+ * URL-based sorting with pinned tab preservation, LRU recent tabs tracking, and
+ * on-device / Cloud AI tab bar grouping.
  */
 
 import {
+  sortTabsByUrl,
   planTabSortMoves,
   RecentTabsTracker,
   filterTabs,
   classifyInput,
   buildSearchUrl,
+  groupTabs,
+  applyTabGroupsToChrome,
+  detectLanguage,
 } from '../src/utils.js';
 
 /**
@@ -21,22 +26,43 @@ export class SidePanelController {
    * @param {Object} [chromeInstance] - Chrome API namespace or mock
    * @param {Object} [domElements] - Object containing DOM element references or mock
    * @param {Object} [utils] - Business logic utilities module
+   * @param {number} [maxRecent=10]
    */
-  constructor(chromeInstance = null, domElements = null, utils = null) {
+  constructor(chromeInstance = null, domElements = null, utils = null, maxRecent = 10) {
     this.chrome = chromeInstance || (typeof chrome !== 'undefined' ? chrome : null);
-    this.utils = utils || {
+    this.utils = {
+      sortTabsByUrl,
       planTabSortMoves,
       RecentTabsTracker,
       filterTabs,
       classifyInput,
       buildSearchUrl,
+      groupTabs,
+      applyTabGroupsToChrome,
+      detectLanguage,
+      ...(utils || {}),
     };
 
     this.dom = domElements || this._resolveDomElements();
-    this.recentTracker = new this.utils.RecentTabsTracker(5);
+    this.recentTracker = new this.utils.RecentTabsTracker(maxRecent);
     this.isSorting = false;
+    this.isSortedByUrl = false;
     this.currentSearchQuery = '';
     this.currentWindowId = null;
+
+    // AI Tab Grouping State
+    this.isGrouping = false;
+    this.aiSettings = {
+      provider: 'auto',
+      geminiApiKey: '',
+      geminiModel: 'gemini-2.5-flash',
+      ollamaEndpoint: 'http://localhost:11434',
+      ollamaModel: 'gemma2',
+      language: 'auto',
+      unpinPinned: false,
+    };
+    this.tabGroupsMap = new Map();
+    this.statusBannerTimer = null;
 
     if (this.dom && this.chrome) {
       this._bindEvents();
@@ -53,6 +79,24 @@ export class SidePanelController {
       root: document.getElementById('root') || document.body,
       searchInput: document.getElementById('searchInput'),
       sortUrlBtn: document.getElementById('sortUrlBtn'),
+      aiGroupBtn: document.getElementById('aiGroupBtn'),
+      settingsToggleBtn: document.getElementById('settingsToggleBtn'),
+      settingsModal: document.getElementById('settingsModal'),
+      settingsCloseBtn: document.getElementById('settingsCloseBtn'),
+      settingsSaveBtn: document.getElementById('settingsSaveBtn'),
+      aiStatusBanner: document.getElementById('aiStatusBanner'),
+      aiStatusText: document.getElementById('aiStatusText'),
+      aiStatusCloseBtn: document.getElementById('aiStatusCloseBtn'),
+      aiProviderSelect: document.getElementById('aiProviderSelect'),
+      geminiSettingsSection: document.getElementById('geminiSettingsSection'),
+      geminiApiKeyInput: document.getElementById('geminiApiKeyInput'),
+      geminiModelSelect: document.getElementById('geminiModelSelect'),
+      ollamaSettingsSection: document.getElementById('ollamaSettingsSection'),
+      ollamaEndpointInput: document.getElementById('ollamaEndpointInput'),
+      ollamaModelInput: document.getElementById('ollamaModelInput'),
+      languageSelect: document.getElementById('languageSelect'),
+      unpinPinnedCheckbox: document.getElementById('unpinPinnedCheckbox'),
+      compactToggleBtn: document.getElementById('compactToggleBtn'),
       recentSection: document.getElementById('recentSection'),
       recentList: document.getElementById('recentList'),
       sectionSeparator: document.getElementById('sectionSeparator'),
@@ -63,7 +107,7 @@ export class SidePanelController {
   }
 
   /**
-   * Initializes controller state, window scoping, and seeds the recent tabs list.
+   * Initializes controller state, window scoping, AI settings, and seeds the recent tabs list.
    */
   async init() {
     if (this.chrome?.windows?.getCurrent) {
@@ -80,6 +124,8 @@ export class SidePanelController {
     if (this.currentWindowId == null && this.chrome?.currentWindowId != null) {
       this.currentWindowId = this.chrome.currentWindowId;
     }
+
+    await this.loadAiSettings();
 
     const tabs = await this.getTabs();
 
@@ -98,7 +144,61 @@ export class SidePanelController {
     }
 
     this.recentTracker.initFromTabs(tabs, savedIds);
+
+    // Restore saved compact mode state if available
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const isCompact = localStorage.getItem('moratab_compact') === 'true';
+        if (isCompact && document?.body) {
+          document.body.classList.add('compact-mode');
+          if (this.dom?.compactToggleBtn?.classList) {
+            this.dom.compactToggleBtn.classList.add('active');
+          }
+        }
+      } catch (err) {
+        // LocalStorage access error ignored
+      }
+
+      try {
+        const isSorted = localStorage.getItem('moratab_sort_by_url') === 'true';
+        if (isSorted) {
+          this.isSortedByUrl = true;
+          if (this.dom?.sortUrlBtn?.classList) {
+            this.dom.sortUrlBtn.classList.add('active');
+          }
+          if (this.dom?.sortUrlBtn?.setAttribute) {
+            this.dom.sortUrlBtn.setAttribute('aria-pressed', 'true');
+            this.dom.sortUrlBtn.setAttribute('title', 'Tabs sorted by URL (click to reset order)');
+          }
+        }
+      } catch (err) {
+        // LocalStorage access error ignored
+      }
+    }
+
+    await this._refreshTabGroups();
     await this.render();
+  }
+
+  /**
+   * Refreshes internal cache of tab groups for the current window.
+   * @private
+   */
+  async _refreshTabGroups() {
+    this.tabGroupsMap.clear();
+    if (this.chrome?.tabGroups?.query) {
+      try {
+        const queryObj = this.currentWindowId != null ? { windowId: this.currentWindowId } : {};
+        const groups = await this.chrome.tabGroups.query(queryObj);
+        if (Array.isArray(groups)) {
+          for (const g of groups) {
+            this.tabGroupsMap.set(g.id, g);
+          }
+        }
+      } catch (err) {
+        // Ignored in restricted environments
+      }
+    }
   }
 
   /**
@@ -124,6 +224,55 @@ export class SidePanelController {
     if (this.dom?.sortUrlBtn?.addEventListener) {
       this.dom.sortUrlBtn.addEventListener('click', async () => {
         await this.handleSort();
+      });
+    }
+
+    // AI Group Button Click
+    if (this.dom?.aiGroupBtn?.addEventListener) {
+      this.dom.aiGroupBtn.addEventListener('click', async () => {
+        await this.handleAiGroup();
+      });
+    }
+
+    // Settings Toggle Button Click
+    if (this.dom?.settingsToggleBtn?.addEventListener) {
+      this.dom.settingsToggleBtn.addEventListener('click', () => {
+        this.toggleSettingsModal(true);
+      });
+    }
+
+    // Settings Modal Close Button Click
+    if (this.dom?.settingsCloseBtn?.addEventListener) {
+      this.dom.settingsCloseBtn.addEventListener('click', () => {
+        this.toggleSettingsModal(false);
+      });
+    }
+
+    // Settings Save Button Click
+    if (this.dom?.settingsSaveBtn?.addEventListener) {
+      this.dom.settingsSaveBtn.addEventListener('click', async () => {
+        await this.saveAiSettings();
+      });
+    }
+
+    // AI Provider Select Change
+    if (this.dom?.aiProviderSelect?.addEventListener) {
+      this.dom.aiProviderSelect.addEventListener('change', () => {
+        this._updateProviderFieldsVisibility();
+      });
+    }
+
+    // AI Status Banner Close Button Click
+    if (this.dom?.aiStatusCloseBtn?.addEventListener) {
+      this.dom.aiStatusCloseBtn.addEventListener('click', () => {
+        this.hideStatusBanner();
+      });
+    }
+
+    // Compact Mode Toggle Click
+    if (this.dom?.compactToggleBtn?.addEventListener) {
+      this.dom.compactToggleBtn.addEventListener('click', () => {
+        this.toggleCompactMode();
       });
     }
 
@@ -175,7 +324,7 @@ export class SidePanelController {
       // onMoved: Protected by isSorting mutex to avoid recursive feedback loops
       if (this.chrome.tabs.onMoved?.addListener) {
         this.chrome.tabs.onMoved.addListener(async (tabId, moveInfo) => {
-          if (this.isSorting) return;
+          if (this.isSorting || this.isGrouping) return;
           const effectiveWinId = this.currentWindowId ?? this.chrome.currentWindowId;
           if (effectiveWinId != null && moveInfo?.windowId != null && moveInfo.windowId !== effectiveWinId) {
             return;
@@ -228,6 +377,28 @@ export class SidePanelController {
         });
       }
     }
+
+    // Chrome TabGroups Events
+    if (this.chrome?.tabGroups) {
+      if (this.chrome.tabGroups.onCreated?.addListener) {
+        this.chrome.tabGroups.onCreated.addListener(async () => {
+          await this._refreshTabGroups();
+          await this.render();
+        });
+      }
+      if (this.chrome.tabGroups.onUpdated?.addListener) {
+        this.chrome.tabGroups.onUpdated.addListener(async () => {
+          await this._refreshTabGroups();
+          await this.render();
+        });
+      }
+      if (this.chrome.tabGroups.onRemoved?.addListener) {
+        this.chrome.tabGroups.onRemoved.addListener(async () => {
+          await this._refreshTabGroups();
+          await this.render();
+        });
+      }
+    }
   }
 
   /**
@@ -248,35 +419,277 @@ export class SidePanelController {
   }
 
   /**
-   * Sorts open tabs in the window alphabetically by URL.
-   * Preserves pinned tabs and uses isSorting re-entrancy lock.
+   * Groups all Chrome tabs in the current window using AI (on-device or cloud API)
+   * and creates native tab groups in the Chrome tab strip.
    */
-  async handleSort() {
-    if (this.isSorting) return;
-    this.isSorting = true;
+  async handleAiGroup() {
+    if (this.isGrouping) return;
+    this.isGrouping = true;
 
-    if (this.dom?.sortUrlBtn) {
-      if (this.dom.sortUrlBtn.classList?.add) {
-        this.dom.sortUrlBtn.classList.add('is-sorting');
-      }
-      this.dom.sortUrlBtn.disabled = true;
+    if (this.dom?.aiGroupBtn?.classList?.add) {
+      this.dom.aiGroupBtn.classList.add('loading');
     }
 
+    const allTabs = await this.getTabs();
+    // Pinned tabs must not be touched or grouped unless explicitly unpinned
+    const tabs = this.aiSettings.unpinPinned
+      ? allTabs
+      : allTabs.filter(t => !t.pinned);
+
+    const isFa = this.aiSettings.language === 'fa' ||
+      (this.aiSettings.language === 'auto' && this.utils.detectLanguage && this.utils.detectLanguage(tabs) === 'fa');
+
+    this.showStatusBanner(
+      isFa ? 'در حال گروه‌بندی هوشمند تب‌ها در کروم...' : 'Grouping Chrome tabs with AI...',
+      'info'
+    );
+
     try {
-      const tabs = await this.getTabs();
-      const { sortedIds, targetIndex } = this.utils.planTabSortMoves(tabs);
-      if (sortedIds && sortedIds.length > 0) {
-        await this.chrome.tabs.move(sortedIds, { index: targetIndex });
+      if (tabs.length === 0) {
+        this.showStatusBanner(
+          isFa ? 'تب پین‌نشده‌ای برای گروه‌بندی یافت نشد.' : 'No unpinned tabs to group.',
+          'info',
+          4000
+        );
+        return;
       }
+
+      const grouperFn = this.utils.groupTabs || groupTabs;
+      const result = await grouperFn(tabs, this.aiSettings);
+
+      const applyFn = this.utils.applyTabGroupsToChrome || applyTabGroupsToChrome;
+      await applyFn(this.chrome, result.groups, this.currentWindowId, {
+        unpinPinned: this.aiSettings.unpinPinned,
+      });
+
+      await this._refreshTabGroups();
+      await this.render();
+
+      const successMsg = isFa
+        ? `✨ تمام ${result.tabCount} تب در ${result.groupCount} گروه دسته‌بندی شدند (${result.providerUsed})`
+        : `✨ Grouped all ${result.tabCount} tabs into ${result.groupCount} groups using ${result.providerUsed}!`;
+
+      this.showStatusBanner(successMsg, 'success', 6000);
     } catch (err) {
-      console.error('Failed to sort tabs:', err);
+      console.error('Failed to group tabs with AI:', err);
+      const errorMsg = isFa
+        ? `خطا در گروه‌بندی تب‌ها: ${err?.message || 'خطای ناشناخته'}`
+        : `Failed to group tabs: ${err?.message || 'Unknown error'}`;
+      this.showStatusBanner(errorMsg, 'error', 6000);
     } finally {
-      this.isSorting = false;
-      if (this.dom?.sortUrlBtn) {
-        if (this.dom.sortUrlBtn.classList?.remove) {
-          this.dom.sortUrlBtn.classList.remove('is-sorting');
+      this.isGrouping = false;
+      if (this.dom?.aiGroupBtn?.classList) {
+        if (typeof this.dom.aiGroupBtn.classList.remove === 'function') {
+          this.dom.aiGroupBtn.classList.remove('loading');
+        } else if (typeof this.dom.aiGroupBtn.classList.delete === 'function') {
+          this.dom.aiGroupBtn.classList.delete('loading');
         }
-        this.dom.sortUrlBtn.disabled = false;
+      }
+    }
+  }
+
+  /**
+   * Displays the status banner with a message and auto-dismiss timer.
+   *
+   * @param {string} text - Message text
+   * @param {'info'|'success'|'error'} [type='info'] - Style category
+   * @param {number} [autoHideMs=0] - Milliseconds before auto-hiding (0 = persistent)
+   */
+  showStatusBanner(text, type = 'info', autoHideMs = 0) {
+    if (!this.dom?.aiStatusBanner) return;
+
+    if (this.statusBannerTimer) {
+      clearTimeout(this.statusBannerTimer);
+      this.statusBannerTimer = null;
+    }
+
+    if (this.dom.aiStatusText) {
+      this.dom.aiStatusText.textContent = text;
+    }
+
+    if (this.dom.aiStatusBanner.classList) {
+      const cl = this.dom.aiStatusBanner.classList;
+      const removeCl = (name) => {
+        if (typeof cl.remove === 'function') cl.remove(name);
+        else if (typeof cl.delete === 'function') cl.delete(name);
+      };
+      removeCl('success');
+      removeCl('error');
+      removeCl('info');
+      if (typeof cl.add === 'function') {
+        cl.add(type);
+      }
+    }
+
+    if (this.dom.aiStatusBanner.style) {
+      this.dom.aiStatusBanner.style.display = 'flex';
+    }
+
+    if (autoHideMs > 0) {
+      this.statusBannerTimer = setTimeout(() => {
+        this.hideStatusBanner();
+      }, autoHideMs);
+    }
+  }
+
+  /**
+   * Hides the status banner.
+   */
+  hideStatusBanner() {
+    if (this.statusBannerTimer) {
+      clearTimeout(this.statusBannerTimer);
+      this.statusBannerTimer = null;
+    }
+    if (this.dom?.aiStatusBanner?.style) {
+      this.dom.aiStatusBanner.style.display = 'none';
+    }
+  }
+
+  /**
+   * Opens or closes the AI settings modal dialog.
+   * @param {boolean} show
+   */
+  toggleSettingsModal(show) {
+    if (!this.dom?.settingsModal?.style) return;
+    this.dom.settingsModal.style.display = show ? 'flex' : 'none';
+    if (show) {
+      this._populateSettingsForm();
+    }
+  }
+
+  /**
+   * Populates the settings modal form with current values.
+   * @private
+   */
+  _populateSettingsForm() {
+    if (this.dom?.aiProviderSelect) {
+      this.dom.aiProviderSelect.value = this.aiSettings.provider || 'auto';
+    }
+    if (this.dom?.geminiApiKeyInput) {
+      this.dom.geminiApiKeyInput.value = this.aiSettings.geminiApiKey || '';
+    }
+    if (this.dom?.geminiModelSelect) {
+      this.dom.geminiModelSelect.value = this.aiSettings.geminiModel || 'gemini-2.5-flash';
+    }
+    if (this.dom?.ollamaEndpointInput) {
+      this.dom.ollamaEndpointInput.value = this.aiSettings.ollamaEndpoint || 'http://localhost:11434';
+    }
+    if (this.dom?.ollamaModelInput) {
+      this.dom.ollamaModelInput.value = this.aiSettings.ollamaModel || 'gemma2';
+    }
+    if (this.dom?.languageSelect) {
+      this.dom.languageSelect.value = this.aiSettings.language || 'auto';
+    }
+    if (this.dom?.unpinPinnedCheckbox) {
+      this.dom.unpinPinnedCheckbox.checked = this.aiSettings.unpinPinned === true;
+    }
+    this._updateProviderFieldsVisibility();
+  }
+
+  /**
+   * Adjusts field visibility based on selected AI provider.
+   * @private
+   */
+  _updateProviderFieldsVisibility() {
+    const provider = this.dom?.aiProviderSelect?.value || 'auto';
+    if (this.dom?.geminiSettingsSection?.style) {
+      this.dom.geminiSettingsSection.style.display = (provider === 'gemini' || provider === 'auto') ? 'flex' : 'none';
+    }
+    if (this.dom?.ollamaSettingsSection?.style) {
+      this.dom.ollamaSettingsSection.style.display = (provider === 'ollama' || provider === 'auto') ? 'flex' : 'none';
+    }
+  }
+
+  /**
+   * Saves AI settings from the form to memory and storage.
+   */
+  async saveAiSettings() {
+    this.aiSettings = {
+      provider: this.dom?.aiProviderSelect?.value || 'auto',
+      geminiApiKey: this.dom?.geminiApiKeyInput?.value?.trim() || '',
+      geminiModel: this.dom?.geminiModelSelect?.value || 'gemini-2.5-flash',
+      ollamaEndpoint: this.dom?.ollamaEndpointInput?.value?.trim() || 'http://localhost:11434',
+      ollamaModel: this.dom?.ollamaModelInput?.value?.trim() || 'gemma2',
+      language: this.dom?.languageSelect?.value || 'auto',
+      unpinPinned: this.dom?.unpinPinnedCheckbox ? this.dom.unpinPinnedCheckbox.checked : false,
+    };
+
+    if (this.chrome?.storage?.local) {
+      try {
+        await this.chrome.storage.local.set({ moratab_ai_settings: this.aiSettings });
+      } catch (err) {
+        console.warn('Could not save settings to chrome.storage.local:', err);
+      }
+    } else if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('moratab_ai_settings', JSON.stringify(this.aiSettings));
+      } catch {
+        // ignore
+      }
+    }
+
+    this.toggleSettingsModal(false);
+    this.showStatusBanner('Settings saved successfully.', 'success', 3000);
+  }
+
+  /**
+   * Loads saved AI settings from persistent storage.
+   */
+  async loadAiSettings() {
+    if (this.chrome?.storage?.local) {
+      try {
+        const data = await this.chrome.storage.local.get('moratab_ai_settings');
+        if (data?.moratab_ai_settings) {
+          this.aiSettings = { ...this.aiSettings, ...data.moratab_ai_settings };
+        }
+      } catch {
+        // ignore
+      }
+    } else if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('moratab_ai_settings');
+        if (stored) {
+          this.aiSettings = { ...this.aiSettings, ...JSON.parse(stored) };
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /**
+   * Toggles alphabetical URL sorting for tabs displayed in the side panel.
+   * Does NOT alter open Chrome tabs or call chrome.tabs.move.
+   */
+  async handleSort() {
+    this.isSortedByUrl = !this.isSortedByUrl;
+
+    if (this.dom?.sortUrlBtn?.classList) {
+      if (this.isSortedByUrl) {
+        if (typeof this.dom.sortUrlBtn.classList.add === 'function') {
+          this.dom.sortUrlBtn.classList.add('active');
+        }
+      } else {
+        if (typeof this.dom.sortUrlBtn.classList.remove === 'function') {
+          this.dom.sortUrlBtn.classList.remove('active');
+        } else if (typeof this.dom.sortUrlBtn.classList.delete === 'function') {
+          this.dom.sortUrlBtn.classList.delete('active');
+        }
+      }
+    }
+    if (this.dom?.sortUrlBtn?.setAttribute) {
+      this.dom.sortUrlBtn.setAttribute('aria-pressed', String(this.isSortedByUrl));
+      this.dom.sortUrlBtn.setAttribute(
+        'title',
+        this.isSortedByUrl ? 'Tabs sorted by URL (click to reset order)' : 'Sort open tabs alphabetically by URL'
+      );
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('moratab_sort_by_url', String(this.isSortedByUrl));
+      } catch (err) {
+        // LocalStorage access error ignored
       }
     }
 
@@ -308,6 +721,24 @@ export class SidePanelController {
           const fallbackUrl = this.utils.buildSearchUrl(classified.target);
           await this.chrome.tabs.create({ url: fallbackUrl });
         }
+      }
+    }
+  }
+
+  /**
+   * Toggles compact view mode for slim sidebar widths.
+   */
+  toggleCompactMode() {
+    if (typeof document === 'undefined') return;
+    const isCompact = document.body.classList.toggle('compact-mode');
+    if (this.dom?.compactToggleBtn?.classList) {
+      this.dom.compactToggleBtn.classList.toggle('active', isCompact);
+    }
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('moratab_compact', String(isCompact));
+      } catch (err) {
+        // Storage error ignored
       }
     }
   }
@@ -348,7 +779,13 @@ export class SidePanelController {
       this.dom.remainingSection.style.display = 'block';
     }
 
-    const { recentTabs, remainingTabs } = this.recentTracker.partitionTabs(filteredTabs);
+    let tabsToPartition = filteredTabs;
+    if (this.isSortedByUrl && typeof this.utils.sortTabsByUrl === 'function') {
+      const { sortedTabs } = this.utils.sortTabsByUrl(filteredTabs);
+      tabsToPartition = sortedTabs;
+    }
+
+    const { recentTabs, remainingTabs } = this.recentTracker.partitionTabs(tabsToPartition);
 
     // Render Recent Tabs
     this._clearElement(this.dom?.recentList);
@@ -404,6 +841,7 @@ export class SidePanelController {
    * children[1]: url span
    * children[2]: favicon img
    * children[3]: close button
+   * children[4]: optional tab group badge
    *
    * @param {Object} tab - Chrome tab object
    * @returns {HTMLElement|Object} Rendered tab element
@@ -490,6 +928,29 @@ export class SidePanelController {
       });
     }
     li.appendChild(closeBtn);
+
+    // Child 4 (Optional): Tab Group Badge if grouped
+    if (tab.groupId && tab.groupId > 0 && this.tabGroupsMap.has(tab.groupId)) {
+      const groupInfo = this.tabGroupsMap.get(tab.groupId);
+      if (groupInfo?.title) {
+        let badge;
+        if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+          badge = document.createElement('span');
+        } else {
+          const ElementClass = this.dom?.root?.constructor || Object;
+          badge = new ElementClass('span');
+        }
+        badge.className = 'tab-group-badge';
+        if (badge.classList && typeof badge.classList.add === 'function') {
+          badge.classList.add('tab-group-badge');
+        }
+        badge.textContent = groupInfo.title;
+        if (badge.setAttribute) {
+          badge.setAttribute('data-group-color', groupInfo.color || 'blue');
+        }
+        li.appendChild(badge);
+      }
+    }
 
     // Click on tab switches active browser tab
     if (typeof li.addEventListener === 'function') {

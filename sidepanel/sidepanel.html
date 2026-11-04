@@ -22,19 +22,122 @@
           spellcheck="false"
         >
       </div>
-      <button
-        type="button"
-        id="sortUrlBtn"
-        class="btn-sort"
-        aria-label="Sort tabs by URL"
-        title="Sort open tabs alphabetically by URL"
-      >
-        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
-          <path fill-rule="evenodd" d="M2.24 6.8a.75.75 0 001.06-.04l1.95-2.1v8.59a.75.75 0 001.5 0V4.66l1.95 2.1a.75.75 0 101.1-1.02l-3.25-3.5a.75.75 0 00-1.1 0L2.2 5.74a.75.75 0 00.04 1.06zm8 6.4a.75.75 0 00-.04 1.06l3.25 3.5a.75.75 0 001.1 0l3.25-3.5a.75.75 0 10-1.1-1.02l-1.95 2.1V6.75a.75.75 0 00-1.5 0v8.59l-1.95-2.1a.75.75 0 00-1.06-.04z" clip-rule="evenodd" />
-        </svg>
-        <span>Sort</span>
-      </button>
+      <div class="header-toolbar">
+        <div class="toolbar-group">
+          <button
+            type="button"
+            id="aiGroupBtn"
+            class="btn-sort btn-ai-group"
+            aria-label="Group tabs with AI"
+            title="Group all Chrome tabs using on-device Gemma or AI API"
+          >
+            <svg class="sparkle-icon" viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+              <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.001 8.001 0 01-6.208 6.208l-1.192.24a1 1 0 000 1.96l1.192.24a8.001 8.001 0 016.208 6.208l.24 1.192a1 1 0 001.96 0l.24-1.192a8.001 8.001 0 016.208-6.208l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.001 8.001 0 01-6.208-6.208l-.24-1.192zM4.333 2.167a.75.75 0 00-1.466 0l-.116.58a3.5 3.5 0 01-2.671 2.671l-.58.116a.75.75 0 000 1.466l.58.116a3.5 3.5 0 012.671 2.671l.116.58a.75.75 0 001.466 0l.116-.58a3.5 3.5 0 012.671-2.671l.58-.116a.75.75 0 000-1.466l-.58-.116a3.5 3.5 0 01-2.671-2.671l-.116-.58z"/>
+            </svg>
+            <span class="btn-text">AI Group</span>
+          </button>
+          <button
+            type="button"
+            id="sortUrlBtn"
+            class="btn-sort"
+            aria-label="Sort tabs by URL"
+            title="Sort open tabs alphabetically by URL"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+              <path fill-rule="evenodd" d="M2.24 6.8a.75.75 0 001.06-.04l1.95-2.1v8.59a.75.75 0 001.5 0V4.66l1.95 2.1a.75.75 0 101.1-1.02l-3.25-3.5a.75.75 0 00-1.1 0L2.2 5.74a.75.75 0 00.04 1.06zm8 6.4a.75.75 0 00-.04 1.06l3.25 3.5a.75.75 0 001.1 0l3.25-3.5a.75.75 0 10-1.1-1.02l-1.95 2.1V6.75a.75.75 0 00-1.5 0v8.59l-1.95-2.1a.75.75 0 00-1.06-.04z" clip-rule="evenodd" />
+            </svg>
+            <span>Sort</span>
+          </button>
+        </div>
+        <div class="toolbar-group">
+          <button
+            type="button"
+            id="settingsToggleBtn"
+            class="btn-icon"
+            aria-label="AI Settings"
+            title="Configure AI model (Gemma, Gemini API, Ollama)"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+              <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            id="compactToggleBtn"
+            class="btn-icon"
+            aria-label="Toggle compact view"
+            title="Toggle compact view"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+              <path fill-rule="evenodd" d="M3 4.75A.75.75 0 013.75 4h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 4.75zm0 5.25A.75.75 0 013.75 9.25h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 10zm0 5.25a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </header>
+
+    <div id="aiStatusBanner" class="ai-status-banner" style="display: none;" role="status" aria-live="polite">
+      <span id="aiStatusText" class="ai-status-text"></span>
+      <button type="button" id="aiStatusCloseBtn" class="ai-status-close" aria-label="Dismiss">×</button>
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div id="settingsModal" class="settings-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+      <div class="settings-dialog">
+        <div class="settings-header">
+          <h3 id="settingsModalTitle">AI Grouping Settings</h3>
+          <button type="button" id="settingsCloseBtn" class="btn-icon-sm" aria-label="Close settings">×</button>
+        </div>
+        <div class="settings-body">
+          <div class="setting-field">
+            <label for="aiProviderSelect">AI Provider</label>
+            <select id="aiProviderSelect">
+              <option value="auto">Auto (On-Device Gemma → Gemini API → Rule Clusterer)</option>
+              <option value="chrome">Chrome Built-in AI (Gemma Nano)</option>
+              <option value="gemini">Google Gemini API (Cloud)</option>
+              <option value="ollama">Local Ollama (Gemma / Gemma 2)</option>
+              <option value="heuristic">Smart Rule-Based (No AI / Offline)</option>
+            </select>
+          </div>
+
+          <div id="geminiSettingsSection" class="setting-field">
+            <label for="geminiApiKeyInput">Gemini API Key</label>
+            <input type="password" id="geminiApiKeyInput" placeholder="Paste your API key here..." autocomplete="off">
+            <label for="geminiModelSelect" class="sub-label">Model</label>
+            <select id="geminiModelSelect">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast & Accurate)</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            </select>
+          </div>
+
+          <div id="ollamaSettingsSection" class="setting-field">
+            <label for="ollamaEndpointInput">Ollama Endpoint</label>
+            <input type="text" id="ollamaEndpointInput" value="http://localhost:11434" placeholder="http://localhost:11434">
+            <label for="ollamaModelInput" class="sub-label">Model Name</label>
+            <input type="text" id="ollamaModelInput" value="gemma2" placeholder="gemma2">
+          </div>
+
+          <div class="setting-field">
+            <label for="languageSelect">Naming Language</label>
+            <select id="languageSelect">
+              <option value="auto">Auto-detect (Persian if tabs are in Persian, otherwise English)</option>
+              <option value="fa">Persian (فارسی)</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <div class="setting-field checkbox-field">
+            <label>
+              <input type="checkbox" id="unpinPinnedCheckbox">
+              <span>Unpin pinned tabs so all tabs are grouped</span>
+            </label>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <button type="button" id="settingsSaveBtn" class="btn-primary">Save Settings</button>
+        </div>
+      </div>
+    </div>
 
     <main class="panel-content">
       <section id="recentSection" class="tab-section" aria-label="Recent Tabs">

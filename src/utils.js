@@ -509,3 +509,22 @@ export function buildSearchUrl(query) {
   const q = typeof query === 'string' ? query : (query != null ? String(query) : '');
   return `https://www.google.com/search?q=${encodeURIComponent(q.trim())}`;
 }
+
+// ============================================================================
+// 4. AI-Powered Tab Bar Grouping
+// ============================================================================
+export {
+  CHROME_TAB_GROUP_COLORS,
+  extractDomain,
+  getDomainService,
+  matchesKeywords,
+  containsPersian,
+  detectLanguage,
+  buildGroupingPrompt,
+  reconcileTabGroups,
+  parseAndValidateGroupingResponse,
+  clusterTabsHeuristic,
+  groupTabs,
+  applyTabGroupsToChrome,
+} from './ai-grouper.js';
+

@@ -321,11 +321,54 @@ export class MockChrome {
           }
         }
       },
+      group: async (options = {}) => {
+        const tabIds = options?.tabIds || [];
+        const newGroupId = (this.tabGroupsList.reduce((max, g) => Math.max(max, g.id), 0) || 0) + 1;
+        const groupObj = { id: newGroupId, title: '', color: 'grey', windowId: this.currentWindowId };
+        this.tabGroupsList.push(groupObj);
+        for (const id of tabIds) {
+          const tab = this.tabsList.find(t => t.id === id);
+          if (tab) tab.groupId = newGroupId;
+        }
+        return newGroupId;
+      },
+      ungroup: async (tabIds) => {
+        const ids = Array.isArray(tabIds) ? tabIds : [tabIds];
+        for (const id of ids) {
+          const tab = this.tabsList.find(t => t.id === id);
+          if (tab) tab.groupId = -1;
+        }
+      },
       onActivated: new MockChromeEvent(),
       onRemoved: new MockChromeEvent(),
       onMoved: new MockChromeEvent(),
       onCreated: new MockChromeEvent(),
       onUpdated: new MockChromeEvent(),
+    };
+
+    this.tabGroupsList = [];
+    this.tabGroups = {
+      query: async (queryInfo = {}) => {
+        return this.tabGroupsList.filter(g => {
+          if (queryInfo.windowId !== undefined && g.windowId !== queryInfo.windowId) return false;
+          return true;
+        }).map(g => ({ ...g }));
+      },
+      get: async (groupId) => {
+        const g = this.tabGroupsList.find(item => item.id === groupId);
+        if (!g) throw new Error(`Tab group ${groupId} not found`);
+        return { ...g };
+      },
+      update: async (groupId, updateProps = {}) => {
+        const g = this.tabGroupsList.find(item => item.id === groupId);
+        if (!g) throw new Error(`Tab group ${groupId} not found`);
+        if (updateProps.title !== undefined) g.title = updateProps.title;
+        if (updateProps.color !== undefined) g.color = updateProps.color;
+        return { ...g };
+      },
+      onCreated: new MockChromeEvent(),
+      onUpdated: new MockChromeEvent(),
+      onRemoved: new MockChromeEvent(),
     };
 
     this.windows = {
@@ -375,6 +418,10 @@ export class MockElement {
     this.tagName = tagName.toUpperCase();
     this.id = id;
     this.classList = new Set();
+    this.classList.remove = (...names) => {
+      for (const n of names) this.classList.delete(n);
+    };
+    this.classList.contains = (n) => this.classList.has(n);
     this.className = '';
     this.children = [];
     this.parentElement = null;
@@ -496,6 +543,27 @@ export class MockSidePanelDOM {
     this.searchInput = new MockElement('input', 'searchInput');
     this.searchInput.setAttribute('type', 'search');
     this.sortUrlBtn = new MockElement('button', 'sortUrlBtn');
+    this.aiGroupBtn = new MockElement('button', 'aiGroupBtn');
+    this.settingsToggleBtn = new MockElement('button', 'settingsToggleBtn');
+    this.settingsModal = new MockElement('div', 'settingsModal');
+    this.settingsCloseBtn = new MockElement('button', 'settingsCloseBtn');
+    this.settingsSaveBtn = new MockElement('button', 'settingsSaveBtn');
+    this.aiStatusBanner = new MockElement('div', 'aiStatusBanner');
+    this.aiStatusText = new MockElement('span', 'aiStatusText');
+    this.aiStatusCloseBtn = new MockElement('button', 'aiStatusCloseBtn');
+    this.aiStatusBanner.appendChild(this.aiStatusText);
+    this.aiStatusBanner.appendChild(this.aiStatusCloseBtn);
+    this.aiProviderSelect = new MockElement('select', 'aiProviderSelect');
+    this.geminiSettingsSection = new MockElement('div', 'geminiSettingsSection');
+    this.geminiApiKeyInput = new MockElement('input', 'geminiApiKeyInput');
+    this.geminiModelSelect = new MockElement('select', 'geminiModelSelect');
+    this.ollamaSettingsSection = new MockElement('div', 'ollamaSettingsSection');
+    this.ollamaEndpointInput = new MockElement('input', 'ollamaEndpointInput');
+    this.ollamaModelInput = new MockElement('input', 'ollamaModelInput');
+    this.languageSelect = new MockElement('select', 'languageSelect');
+    this.unpinPinnedCheckbox = new MockElement('input', 'unpinPinnedCheckbox');
+    this.unpinPinnedCheckbox.checked = false;
+    this.compactToggleBtn = new MockElement('button', 'compactToggleBtn');
     this.recentSection = new MockElement('div', 'recentSection');
     this.recentList = new MockElement('ul', 'recentList');
     this.recentSection.appendChild(this.recentList);
@@ -507,7 +575,12 @@ export class MockSidePanelDOM {
     this.emptyState = new MockElement('div', 'emptyState');
 
     this.root.appendChild(this.searchInput);
+    this.root.appendChild(this.aiGroupBtn);
     this.root.appendChild(this.sortUrlBtn);
+    this.root.appendChild(this.settingsToggleBtn);
+    this.root.appendChild(this.compactToggleBtn);
+    this.root.appendChild(this.aiStatusBanner);
+    this.root.appendChild(this.settingsModal);
     this.root.appendChild(this.recentSection);
     this.root.appendChild(this.sectionSeparator);
     this.root.appendChild(this.remainingSection);
