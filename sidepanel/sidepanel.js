@@ -88,6 +88,8 @@ export class SidePanelController {
       sortUrlBtn: document.getElementById('sortUrlBtn'),
       aiGroupBtn: document.getElementById('aiGroupBtn'),
       settingsToggleBtn: document.getElementById('settingsToggleBtn'),
+      donateBtn: document.getElementById('donateBtn'),
+      settingsDonateBtn: document.getElementById('settingsDonateBtn'),
       settingsModal: document.getElementById('settingsModal'),
       settingsCloseBtn: document.getElementById('settingsCloseBtn'),
       settingsSaveBtn: document.getElementById('settingsSaveBtn'),
@@ -251,6 +253,20 @@ export class SidePanelController {
     if (this.dom?.settingsToggleBtn?.addEventListener) {
       this.dom.settingsToggleBtn.addEventListener('click', () => {
         this.toggleSettingsModal(true);
+      });
+    }
+
+    // Donate Button Click (Header Toolbar)
+    if (this.dom?.donateBtn?.addEventListener) {
+      this.dom.donateBtn.addEventListener('click', async () => {
+        await this.openDonateLink();
+      });
+    }
+
+    // Donate Button Click (Settings Dialog)
+    if (this.dom?.settingsDonateBtn?.addEventListener) {
+      this.dom.settingsDonateBtn.addEventListener('click', async () => {
+        await this.openDonateLink();
       });
     }
 
@@ -889,6 +905,25 @@ export class SidePanelController {
       } catch (err) {
         // Storage error ignored
       }
+    }
+  }
+
+  /**
+   * Opens the donation page in a new browser tab.
+   * @param {string} [url='https://pay.theminiceo.ir/link/783576']
+   * @returns {Promise<void>}
+   */
+  async openDonateLink(url = 'https://pay.theminiceo.ir/link/783576') {
+    if (this.chrome?.tabs?.create) {
+      try {
+        await this.chrome.tabs.create({ url });
+        return;
+      } catch (err) {
+        console.warn('Failed to open donate link via chrome.tabs.create:', err);
+      }
+    }
+    if (typeof window !== 'undefined' && typeof window.open === 'function') {
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   }
 

@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradients -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#070a13" />
+    </radialGradient>
+    <radialGradient id="blueGlow" cx="20%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="purpleGlow" cx="80%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#818cf8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="primaryTextGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.85" />
+    </linearGradient>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0.12" />
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="20" stdDeviation="25" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    .font-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Vazirmatn", "Plus Jakarta Sans", sans-serif; }
+    .font-mono { font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+  <circle cx="250" cy="200" r="400" fill="url(#blueGlow)" />
+  <circle cx="950" cy="300" r="450" fill="url(#purpleGlow)" />
+
+  <!-- Grid overlay -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="70" x2="1200" y2="70" />
+    <line x1="0" y1="140" x2="1200" y2="140" />
+    <line x1="0" y1="210" x2="1200" y2="210" />
+    <line x1="0" y1="280" x2="1200" y2="280" />
+    <line x1="0" y1="350" x2="1200" y2="350" />
+    <line x1="0" y1="420" x2="1200" y2="420" />
+    <line x1="0" y1="490" x2="1200" y2="490" />
+    <line x1="0" y1="560" x2="1200" y2="560" />
+
+    <line x1="100" y1="0" x2="100" y2="630" />
+    <line x1="200" y1="0" x2="200" y2="630" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="400" y1="0" x2="400" y2="630" />
+    <line x1="500" y1="0" x2="500" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="700" y1="0" x2="700" y2="630" />
+    <line x1="800" y1="0" x2="800" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
+    <line x1="1000" y1="0" x2="1000" y2="630" />
+    <line x1="1100" y1="0" x2="1100" y2="630" />
+  </g>
+
+  <!-- Left / Main Branding Block -->
+  <g transform="translate(80, 80)">
+    <!-- Top Tags -->
+    <g>
+      <rect x="0" y="0" width="220" height="34" rx="17" fill="url(#badgeGrad)" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.4" />
+      <text x="20" y="22" fill="#38bdf8" class="font-sans" font-size="13" font-weight="700" letter-spacing="0.8">✨ MORATAB (مرتب)</text>
+
+      <rect x="230" y="0" width="145" height="34" rx="17" fill="#1e293b" fill-opacity="0.6" stroke="#475569" stroke-width="1" />
+      <text x="245" y="22" fill="#cbd5e1" class="font-sans" font-size="12" font-weight="600">Chrome Manifest V3</text>
+
+      <rect x="385" y="0" width="125" height="34" rx="17" fill="#1e293b" fill-opacity="0.6" stroke="#475569" stroke-width="1" />
+      <text x="400" y="22" fill="#34d399" class="font-sans" font-size="12" font-weight="600">● Open Source</text>
+    </g>
+
+    <!-- Main Title & Value Prop -->
+    <text x="0" y="105" fill="#ffffff" class="font-sans" font-size="44" font-weight="900" letter-spacing="-0.5">
+      پایان آشفتگی ده‌ها تب با
+    </text>
+    <text x="0" y="160" fill="url(#primaryTextGrad)" class="font-sans" font-size="46" font-weight="900" letter-spacing="-0.5">
+      مدیریت هوشمند تب‌ها در کروم
+    </text>
+
+    <text x="0" y="208" fill="#94a3b8" class="font-sans" font-size="17" font-weight="400" line-height="1.6">
+      اکستنشن متن‌باز Side Panel با دسته‌بندی خودکار بر پایه هوش مصنوعی On-Device
+    </text>
+
+    <!-- Key Bullet Features -->
+    <g transform="translate(0, 245)">
+      <!-- Card 1 -->
+      <g transform="translate(0, 0)">
+        <rect width="250" height="52" rx="12" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#38bdf8" fill-opacity="0.15" />
+        <text x="21" y="31" font-size="14">🤖</text>
+        <text x="50" y="25" fill="#f8fafc" class="font-sans" font-size="13" font-weight="700">هوش مصنوعی Gemini &amp; Nano</text>
+        <text x="50" y="41" fill="#64748b" class="font-sans" font-size="11">گروه‌بندی هوشمند و نام‌گذاری دقیق</text>
+      </g>
+
+      <!-- Card 2 -->
+      <g transform="translate(265, 0)">
+        <rect width="250" height="52" rx="12" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#10b981" fill-opacity="0.15" />
+        <text x="21" y="31" font-size="14">⚡</text>
+        <text x="50" y="25" fill="#f8fafc" class="font-sans" font-size="13" font-weight="700">Zero Dependencies</text>
+        <text x="50" y="41" fill="#64748b" class="font-sans" font-size="11">۱۰۰٪ Pure Vanilla JS بدون سربار</text>
+      </g>
+
+      <!-- Card 3 -->
+      <g transform="translate(0, 64)">
+        <rect width="250" height="52" rx="12" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#818cf8" fill-opacity="0.15" />
+        <text x="21" y="31" font-size="14">🗂</text>
+        <text x="50" y="25" fill="#f8fafc" class="font-sans" font-size="13" font-weight="700">پنل کناری بومی (SidePanel)</text>
+        <text x="50" y="41" fill="#64748b" class="font-sans" font-size="11">فهرست، جستجو و تفکیک تب‌های اخیر</text>
+      </g>
+
+      <!-- Card 4 -->
+      <g transform="translate(265, 64)">
+        <rect width="250" height="52" rx="12" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="1" />
+        <circle cx="28" cy="26" r="14" fill="#c084fc" fill-opacity="0.15" />
+        <text x="21" y="31" font-size="14">🔒</text>
+        <text x="50" y="25" fill="#f8fafc" class="font-sans" font-size="13" font-weight="700">حریم خصوصی کامل</text>
+        <text x="50" y="41" fill="#64748b" class="font-sans" font-size="11">پردازش آفلاین یا کلید اختصاصی</text>
+      </g>
+    </g>
+
+    <!-- Bottom Proof Tag -->
+    <g transform="translate(0, 400)">
+      <rect width="235" height="34" rx="8" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="1" stroke-opacity="0.3" />
+      <text x="14" y="22" fill="#34d399" class="font-mono" font-size="12" font-weight="700">✓ 126 / 126 E2E Tests Pass</text>
+
+      <text x="250" y="22" fill="#64748b" class="font-sans" font-size="12">
+        معماری تمیز • آماده انتشار و مشارکت در گیت‌هاب
+      </text>
+    </g>
+  </g>
+
+  <!-- Right Visual Mockup Card (Tab UI Concept) -->
+  <g transform="translate(680, 75)" filter="url(#cardShadow)">
+    <!-- Browser Window Card -->
+    <rect width="440" height="475" rx="18" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.3" />
+    
+    <!-- Window Bar -->
+    <rect width="440" height="42" rx="18" fill="#1e293b" fill-opacity="0.8" />
+    <rect y="24" width="440" height="18" fill="#1e293b" fill-opacity="0.8" />
+    <circle cx="24" cy="21" r="5.5" fill="#ef4444" />
+    <circle cx="42" cy="21" r="5.5" fill="#f59e0b" />
+    <circle cx="60" cy="21" r="5.5" fill="#10b981" />
+    <rect x="84" y="10" width="260" height="22" rx="6" fill="#0f172a" fill-opacity="0.6" stroke="#334155" stroke-width="1" />
+    <text x="120" y="25" fill="#94a3b8" class="font-mono" font-size="11">chrome://sidepanel/moratab</text>
+
+    <!-- Side Panel Header Inside Window -->
+    <g transform="translate(20, 56)">
+      <!-- Search Input Mock -->
+      <rect width="400" height="36" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" stroke-opacity="0.4" />
+      <text x="14" y="23" fill="#64748b" class="font-sans" font-size="12">🔍 جستجو بین تب‌ها یا باز کردن آدرس جدید...</text>
+      <rect x="330" y="6" width="60" height="24" rx="6" fill="#38bdf8" fill-opacity="0.15" />
+      <text x="342" y="22" fill="#38bdf8" class="font-sans" font-size="11" font-weight="700">Sort A-Z</text>
+    </g>
+
+    <!-- AI Tab Group Section -->
+    <g transform="translate(20, 106)">
+      <!-- AI Action Button -->
+      <rect width="400" height="34" rx="8" fill="url(#primaryTextGrad)" />
+      <text x="140" y="22" fill="#0f172a" class="font-sans" font-size="13" font-weight="800">✨ گروه‌بندی هوشمند با هوش مصنوعی</text>
+
+      <!-- Group 1: Development -->
+      <g transform="translate(0, 48)">
+        <rect width="400" height="74" rx="10" fill="#0f172a" fill-opacity="0.7" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" />
+        <rect x="12" y="10" width="130" height="20" rx="4" fill="#0284c7" fill-opacity="0.25" stroke="#38bdf8" stroke-width="1" />
+        <text x="20" y="24" fill="#38bdf8" class="font-sans" font-size="11" font-weight="700">● توسعه و برنامه‌نویسی (4)</text>
+
+        <!-- Tab 1 -->
+        <g transform="translate(14, 38)">
+          <rect width="16" height="16" rx="3" fill="#22c55e" fill-opacity="0.3" />
+          <text x="4" y="12" font-size="10">🐙</text>
+          <text x="26" y="12" fill="#e2e8f0" class="font-sans" font-size="12" font-weight="500">GitHub: moratab / pull-requests</text>
+          <text x="375" y="12" fill="#64748b" class="font-sans" font-size="13">×</text>
+        </g>
+      </g>
+
+      <!-- Group 2: AI & LLM Research -->
+      <g transform="translate(0, 134)">
+        <rect width="400" height="74" rx="10" fill="#0f172a" fill-opacity="0.7" stroke="#a855f7" stroke-width="1" stroke-opacity="0.3" />
+        <rect x="12" y="10" width="145" height="20" rx="4" fill="#7e22ce" fill-opacity="0.25" stroke="#c084fc" stroke-width="1" />
+        <text x="20" y="24" fill="#c084fc" class="font-sans" font-size="11" font-weight="700">● هوش مصنوعی و پژوهش (3)</text>
+
+        <!-- Tab 2 -->
+        <g transform="translate(14, 38)">
+          <rect width="16" height="16" rx="3" fill="#818cf8" fill-opacity="0.3" />
+          <text x="4" y="12" font-size="10">✨</text>
+          <text x="26" y="12" fill="#e2e8f0" class="font-sans" font-size="12" font-weight="500">Google AI Studio - Gemini 2.5</text>
+          <text x="375" y="12" fill="#64748b" class="font-sans" font-size="13">×</text>
+        </g>
+      </g>
+
+      <!-- Group 3: Documentation -->
+      <g transform="translate(0, 220)">
+        <rect width="400" height="74" rx="10" fill="#0f172a" fill-opacity="0.7" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3" />
+        <rect x="12" y="10" width="125" height="20" rx="4" fill="#b45309" fill-opacity="0.25" stroke="#f59e0b" stroke-width="1" />
+        <text x="20" y="24" fill="#fbbf24" class="font-sans" font-size="11" font-weight="700">● مستندات و منابع (2)</text>
+
+        <!-- Tab 3 -->
+        <g transform="translate(14, 38)">
+          <rect width="16" height="16" rx="3" fill="#f59e0b" fill-opacity="0.3" />
+          <text x="4" y="12" font-size="10">📄</text>
+          <text x="26" y="12" fill="#e2e8f0" class="font-sans" font-size="12" font-weight="500">Chrome Extensions: Side Panel API</text>
+          <text x="375" y="12" fill="#64748b" class="font-sans" font-size="13">×</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Floating Badge over Window -->
+    <g transform="translate(-25, 410)" filter="url(#neonGlow)">
+      <rect width="210" height="42" rx="12" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="14" y="26" font-size="16">🚀</text>
+      <text x="40" y="20" fill="#ffffff" class="font-sans" font-size="11" font-weight="700">Chrome Side Panel</text>
+      <text x="40" y="33" fill="#38bdf8" class="font-mono" font-size="10">Native &amp; Zero-Lag</text>
+    </g>
+  </g>
+</svg>

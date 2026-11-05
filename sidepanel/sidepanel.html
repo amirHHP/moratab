@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Moratab (مرتب) — Tab Manager</title>
+  <link rel="preload" href="fonts/Vazirmatn[wght].woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
@@ -50,6 +51,17 @@
           </button>
         </div>
         <div class="toolbar-group">
+          <button
+            type="button"
+            id="donateBtn"
+            class="btn-icon btn-donate"
+            aria-label="Donate"
+            title="حمایت مالی از مرتّب (Donate)"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+              <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-2.92-1.854 18.064 18.064 0 01-3.66-3.805C1.848 9.273 1.25 7.42 1.25 5.5a4.25 4.25 0 017.5-2.784A4.25 4.25 0 0116.25 5.5c0 1.92-.598 3.773-1.799 5.743a18.067 18.067 0 01-3.66 3.805 20.76 20.76 0 01-2.92 1.854l-.019.01-.005.003h-.001a.75.75 0 01-.413.12.75.75 0 01-.413-.12z" />
+            </svg>
+          </button>
           <button
             type="button"
             id="settingsToggleBtn"
@@ -173,6 +185,26 @@
               <input type="checkbox" id="unpinPinnedCheckbox">
               <span>Unpin pinned tabs so all tabs are grouped</span>
             </label>
+          </div>
+
+          <div class="setting-field donate-section">
+            <div class="donate-card">
+              <div class="donate-card-text">
+                <span class="donate-title">حمایت مالی از مرتّب ❤️</span>
+                <span class="donate-desc">اگر از مرتّب راضی هستید، با دونیت کردن به توسعه و بهبود آن کمک کنید.</span>
+              </div>
+              <button
+                type="button"
+                id="settingsDonateBtn"
+                class="btn-donate-link"
+                title="حمایت مالی از طریق درگاه پرداخت"
+              >
+                <span>دونیت</span>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h4a.75.75 0 010 1.5h-4zm6.75-2a.75.75 0 01.75-.75h5.5c.414 0 .75.336.75.75v5.5a.75.75 0 01-1.5 0V4.56l-5.72 5.72a.75.75 0 01-1.06-1.06l5.72-5.72H11.75a.75.75 0 01-.75-.75z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
         <div class="settings-footer">

@@ -295,3 +295,51 @@ describe('SidePanelController: AI Tab Bar Grouping', () => {
   });
 });
 
+describe('SidePanelController: Donation Link Support', () => {
+  it('opens donation URL via chrome.tabs.create when donateBtn is clicked', async () => {
+    const chrome = new MockChrome();
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    await dom.donateBtn.dispatchEvent({ type: 'click' });
+
+    assert.equal(chrome.createdTabs.length, 1);
+    assert.equal(chrome.createdTabs[0].url, 'https://pay.theminiceo.ir/link/783576');
+  });
+
+  it('opens donation URL when settingsDonateBtn is clicked', async () => {
+    const chrome = new MockChrome();
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    await dom.settingsDonateBtn.dispatchEvent({ type: 'click' });
+
+    assert.equal(chrome.createdTabs.length, 1);
+    assert.equal(chrome.createdTabs[0].url, 'https://pay.theminiceo.ir/link/783576');
+  });
+
+  it('falls back to window.open if chrome.tabs.create is unavailable', async () => {
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(null, dom);
+
+    let openedUrl = null;
+    let openedTarget = null;
+    globalThis.window = {
+      open: (url, target) => {
+        openedUrl = url;
+        openedTarget = target;
+      },
+    };
+
+    try {
+      await ctrl.openDonateLink();
+      assert.equal(openedUrl, 'https://pay.theminiceo.ir/link/783576');
+      assert.equal(openedTarget, '_blank');
+    } finally {
+      delete globalThis.window;
+    }
+  });
+});
+

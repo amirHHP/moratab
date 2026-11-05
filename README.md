@@ -2,7 +2,8 @@
 
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](package.json)
-[![Tests Passing](https://img.shields.io/badge/tests-355%2F355%20passing-brightgreen)](test/e2e-runner.test.js)
+[![Tests Passing](https://img.shields.io/badge/tests-413%2F413%20passing-brightgreen)](test/e2e-runner.test.js)
+[![Donate](https://img.shields.io/badge/Donate-حمایت%20مالی-e11d48)](https://pay.theminiceo.ir/link/783576)
 
 **Moratab** (*مرتب*, Persian/Arabic for *"orderly / organized"*) is a Google Chrome Side Panel extension for personal tab management. Built strictly with vanilla JavaScript (ES modules), semantic HTML5, and CSS3, Moratab runs unpackaged directly in Google Chrome with zero build tooling or bundlers.
 
@@ -55,6 +56,11 @@
   - **100% Tab Coverage Guarantee**: All tabs are strictly guaranteed to be assigned to a group. Pinned tabs can be automatically unpinned to ensure full grouping.
   - **Side Panel Group Badges**: Displays colored group pills directly on tabs in the Moratab side panel.
   - **AI Settings Dialog (⚙️)**: Easily customize provider, API key, model, language, and unpinning options.
+
+- **R6. Donation & Project Support (حمایت مالی)**:
+  - Convenient 1-click **Donate** button (`❤️`) located directly in the header toolbar.
+  - Dedicated donation card with direct link in the **Settings** dialog.
+  - Opens the official support gateway ([pay.theminiceo.ir/link/783576](https://pay.theminiceo.ir/link/783576)) safely in a new browser tab.
 
 ---
 
@@ -183,3 +189,13 @@ node --test test/e2e-runner.test.js
 - **Permissions**: `sidePanel`, `tabs`, `favicon`, `search`, `storage`
 - **UI Framework**: Vanilla JavaScript (ES2022+ modules), HTML5 semantic markup, CSS3 (Grid + Custom Properties)
 - **Minimum Chrome Version**: Chrome 114+ (Side Panel API) / Chrome 121+ (Native `tab.lastAccessed`)
+
+---
+
+## Donation & Support (حمایت مالی)
+
+اگر افزونه **مرتّب (Moratab)** برای مدیریت و مرتب‌سازی تب‌های شما مفید و کاربردی بوده است، با دونیت کردن از توسعه و نگهداری رایگان و متن‌باز آن حمایت کنید:
+
+[![Donate](https://img.shields.io/badge/حمایت%20مالی-Donate%20Now-e11d48?style=for-the-badge&logo=heart&logoColor=white)](https://pay.theminiceo.ir/link/783576)
+
+- **درگاه پرداخت و حمایت**: [https://pay.theminiceo.ir/link/783576](https://pay.theminiceo.ir/link/783576)

@@ -569,6 +569,8 @@ export class MockSidePanelDOM {
     this.searchInput.setAttribute('type', 'search');
     this.sortUrlBtn = new MockElement('button', 'sortUrlBtn');
     this.aiGroupBtn = new MockElement('button', 'aiGroupBtn');
+    this.donateBtn = new MockElement('button', 'donateBtn');
+    this.settingsDonateBtn = new MockElement('button', 'settingsDonateBtn');
     this.settingsToggleBtn = new MockElement('button', 'settingsToggleBtn');
     this.settingsModal = new MockElement('div', 'settingsModal');
     this.settingsCloseBtn = new MockElement('button', 'settingsCloseBtn');
