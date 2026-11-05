@@ -2,8 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   extractDomain,
+  getRootDomain,
+  classifyTabByUrl,
   containsPersian,
   detectLanguage,
+  shortenGroupName,
   buildGroupingPrompt,
   reconcileTabGroups,
   parseAndValidateGroupingResponse,
@@ -563,5 +566,160 @@ describe('AI Grouper: applyTabGroupsToChrome', () => {
     assert.equal(updatedTabs.length, 2);
     assert.deepEqual(updatedTabs.map(t => t.id), [1, 2]);
     assert.ok(updatedTabs.every(t => t.pinned === false));
+  });
+});
+
+describe('AI Grouper: 5-Character Names and 5-Tab Minimum Requirements', () => {
+  it('shortens names to at most 5 characters in English and Persian', () => {
+    assert.equal(shortenGroupName('Development & Code', 'en'), 'Code');
+    assert.equal(shortenGroupName('برنامه‌نویسی و کد', 'fa'), 'کد');
+    assert.equal(shortenGroupName('Google Workspace', 'en'), 'Docs');
+    assert.equal(shortenGroupName('اسناد و فضای کاری', 'fa'), 'سند');
+    assert.equal(shortenGroupName('Artificial Intelligence', 'en'), 'AI');
+    assert.equal(shortenGroupName('هوش مصنوعی و پژوهش', 'fa'), 'هوش');
+    assert.equal(shortenGroupName('Social & Communication', 'en'), 'Chat');
+    assert.equal(shortenGroupName('شبکه‌های اجتماعی و پیام‌ها', 'fa'), 'چت');
+    assert.equal(shortenGroupName('Media & Video', 'en'), 'Media');
+    assert.equal(shortenGroupName('Shopping & Finance', 'en'), 'Shop');
+    assert.equal(shortenGroupName('Other Tabs', 'en'), 'Other');
+    assert.equal(shortenGroupName('سایر تب‌ها', 'fa'), 'سایر');
+
+    // Arbitrary long names are truncated to at most 5 chars
+    const arbitrary = shortenGroupName('SomethingVeryLong', 'en', 5);
+    assert.ok(arbitrary.length <= 5);
+  });
+
+  it('enforces minGroupSize: 5 and merges small groups into Other or largest group', () => {
+    const originalTabs = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      title: `Tab ${i + 1}`,
+      url: `https://site${i + 1}.com`,
+    }));
+
+    // Raw AI output has one big group (16 tabs) and three small groups (4 tabs, 3 tabs, 2 tabs)
+    const rawGroups = [
+      { name: 'Development & Code', color: 'blue', tabIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] },
+      { name: 'Shopping & Finance', color: 'orange', tabIds: [17, 18, 19, 20] }, // 4 tabs < 5
+      { name: 'News & Articles', color: 'yellow', tabIds: [21, 22, 23] },         // 3 tabs < 5
+      { name: 'Media & Video', color: 'red', tabIds: [24, 25] },                  // 2 tabs < 5
+    ];
+
+    const reconciled = reconcileTabGroups(rawGroups, originalTabs, {
+      minGroupSize: 5,
+      maxNameLength: 5,
+      language: 'en',
+    });
+
+    // 1. Every group name must be <= 5 chars
+    for (const g of reconciled) {
+      assert.ok(g.name.length <= 5, `Group name "${g.name}" exceeded 5 characters!`);
+    }
+
+    // 2. Every group must have >= 5 tabs
+    for (const g of reconciled) {
+      assert.ok(g.tabIds.length >= 5, `Group "${g.name}" had ${g.tabIds.length} tabs which is < 5!`);
+    }
+
+    // 3. Exactly 100% of tabs are assigned (no duplicates, no omissions)
+    const assignedIds = new Set(reconciled.flatMap(g => g.tabIds));
+    assert.equal(assignedIds.size, 25);
+    for (let i = 1; i <= 25; i++) {
+      assert.ok(assignedIds.has(i), `Tab ${i} was omitted!`);
+    }
+  });
+
+  it('sub-clusters large leftovers pool into thematic groups instead of one giant Other group', () => {
+    const originalTabs = [
+      // 5 tools/code tabs
+      { id: 1, title: 'GitHub PR', url: 'https://github.com/a' },
+      { id: 2, title: 'GitLab MR', url: 'https://gitlab.com/b' },
+      { id: 3, title: 'StackOverflow question', url: 'https://stackoverflow.com/c' },
+      { id: 4, title: 'NPM package', url: 'https://npmjs.com/d' },
+      { id: 5, title: 'Linear issue', url: 'https://linear.app/e' },
+      // 5 news/info tabs
+      { id: 6, title: 'Medium article', url: 'https://medium.com/f' },
+      { id: 7, title: 'Substack post', url: 'https://substack.com/g' },
+      { id: 8, title: 'Wikipedia entry', url: 'https://wikipedia.org/h' },
+      { id: 9, title: 'The Verge news', url: 'https://theverge.com/i' },
+      { id: 10, title: 'BBC report', url: 'https://bbc.com/j' },
+      // 5 media tabs
+      { id: 11, title: 'YouTube watch', url: 'https://youtube.com/k' },
+      { id: 12, title: 'Spotify music', url: 'https://spotify.com/l' },
+      { id: 13, title: 'SoundCloud audio', url: 'https://soundcloud.com/m' },
+      { id: 14, title: 'Netflix stream', url: 'https://netflix.com/n' },
+      { id: 15, title: 'Twitch live', url: 'https://twitch.tv/o' },
+      // 2 misc tabs
+      { id: 16, title: 'Misc 1', url: 'https://randomsite1.com' },
+      { id: 17, title: 'Misc 2', url: 'https://randomsite2.com' },
+    ];
+
+    const reconciled = reconcileTabGroups([], originalTabs, {
+      minGroupSize: 5,
+      maxNameLength: 5,
+      language: 'en',
+    });
+
+    assert.ok(reconciled.length >= 3, `Expected at least 3 groups, but got ${reconciled.length}`);
+    for (const g of reconciled) {
+      assert.ok(g.tabIds.length >= 5, `Group ${g.name} had < 5 tabs!`);
+      assert.ok(g.name.length <= 5, `Group ${g.name} exceeded 5 chars!`);
+    }
+
+    const assignedIds = new Set(reconciled.flatMap(g => g.tabIds));
+    assert.equal(assignedIds.size, originalTabs.length);
+  });
+});
+
+describe('AI Grouper: Deep URL & Address Inspection (getRootDomain & classifyTabByUrl)', () => {
+  it('extracts canonical root domains for standard domains, subdomains, and ccTLDs', () => {
+    assert.equal(getRootDomain('https://www.sec.gov/Archives/edgar/data/1477333/000147733324000001/s-1.htm'), 'sec.gov');
+    assert.equal(getRootDomain('https://archives.sec.gov/filings'), 'sec.gov');
+    assert.equal(getRootDomain('https://sub.domain.co.uk:8080/path'), 'domain.co.uk');
+    assert.equal(getRootDomain('https://portal.mfa.gov.ir/dashboard'), 'mfa.gov.ir');
+    assert.equal(getRootDomain('https://github.com/facebook/react'), 'github.com');
+    assert.equal(getRootDomain('http://localhost:3000'), 'localhost');
+    assert.equal(getRootDomain('http://127.0.0.1:8080/api'), '127.0.0.1');
+    assert.equal(getRootDomain(''), '');
+  });
+
+  it('strictly classifies SEC and EDGAR filings from URLs and titles', () => {
+    const secTab = {
+      id: 1,
+      title: 'S-1',
+      url: 'https://www.sec.gov/Archives/edgar/data/1477333/000147733324000001/s-1.htm',
+    };
+    const c = classifyTabByUrl(secTab);
+    assert.equal(c.categoryId, 'sec');
+    assert.equal(c.shortEn, 'SEC');
+    assert.equal(c.rootDomain, 'sec.gov');
+
+    const form10kTab = {
+      id: 2,
+      title: 'Apple Inc. - Annual Report Form 10-K',
+      url: 'https://investor.apple.com/sec-filings/10-k/default.aspx',
+    };
+    const c2 = classifyTabByUrl(form10kTab);
+    assert.equal(c2.categoryId, 'sec');
+  });
+
+  it('clusters SEC filings and financial tabs into dedicated Fin / SEC groups instead of Other', () => {
+    const tabs = [
+      { id: 1, title: 'S-1', url: 'https://www.sec.gov/Archives/edgar/data/1477333/s-1.htm' },
+      { id: 2, title: 'Form 10-K', url: 'https://archives.sec.gov/Archives/edgar/data/apple/10-k.htm' },
+      { id: 3, title: 'Form 10-Q', url: 'https://www.sec.gov/Archives/edgar/data/microsoft/10-q.htm' },
+      { id: 4, title: 'Bloomberg Markets', url: 'https://bloomberg.com/markets' },
+      { id: 5, title: 'TradingView Chart', url: 'https://tradingview.com/chart/AAPL' },
+    ];
+
+    const groups = clusterTabsHeuristic(tabs, {
+      language: 'en',
+      minGroupSize: 5,
+      maxNameLength: 5,
+    });
+
+    assert.equal(groups.length, 1);
+    assert.ok(groups[0].name === 'Fin' || groups[0].name === 'SEC', `Expected Fin or SEC group name, got ${groups[0].name}`);
+    assert.equal(groups[0].tabIds.length, 5);
+    assert.ok(!groups.some(g => g.name === 'Other'), 'Must NOT group SEC and financial tabs into Other!');
   });
 });

@@ -2,9 +2,18 @@
 
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](package.json)
-[![Tests Passing](https://img.shields.io/badge/tests-184%2F184%20passing-brightgreen)](test/e2e-runner.test.js)
+[![Tests Passing](https://img.shields.io/badge/tests-355%2F355%20passing-brightgreen)](test/e2e-runner.test.js)
 
 **Moratab** (*مرتب*, Persian/Arabic for *"orderly / organized"*) is a Google Chrome Side Panel extension for personal tab management. Built strictly with vanilla JavaScript (ES modules), semantic HTML5, and CSS3, Moratab runs unpackaged directly in Google Chrome with zero build tooling or bundlers.
+
+---
+
+## Screenshots
+
+| Side Panel Interface | Settings & AI Configuration |
+| :---: | :---: |
+| <img src="assets/screenshots/sidepanel-view.png" alt="Moratab Side Panel Tab Manager" width="420" /> | <img src="assets/screenshots/settings-modal.png" alt="Moratab Settings & AI Configuration" width="420" /> |
+| *Tab listing, multi-token search, 1-click sorting, and AI Tab Grouping.* | *Configurable recent tab limit, AI providers (Gemma, Gemini, Ollama), models, and group thresholds.* |
 
 ---
 
@@ -23,7 +32,8 @@
   - **Toggle & State Persistence**: Clicking Sort again restores the natural Chrome tab strip order; preference persists across side panel sessions.
 
 - **R3. Dynamic Recent Tabs & Visual Separator**:
-  - Displays the 3 to 5 most recently accessed tabs above a prominent horizontal separator.
+  - Displays the most recently accessed tabs above a prominent horizontal separator (default **20 tabs**, user-configurable in Settings).
+  - Configurable in Settings dialog: choose from presets (5, 10, 15, 20, 25, 30, 40, 50) or specify a custom count.
   - Dynamic LRU (Least Recently Used) stack updates in real time whenever the user switches tabs (`chrome.tabs.onActivated`).
   - Automatically prunes closed tabs (`chrome.tabs.onRemoved`) and backfills recent slots from history.
 
@@ -54,6 +64,10 @@
 moratab/
 ├── manifest.json              # Chrome Manifest V3 declaration
 ├── background.js              # Service worker (openPanelOnActionClick)
+├── assets/                    # Project documentation assets
+│   └── screenshots/           # Extension UI screenshots
+│       ├── sidepanel-view.png # Side panel interface & tab list
+│       └── settings-modal.png # Settings modal & AI configuration
 ├── icons/                     # Extension PNG assets
 │   ├── icon16.png             # 16x16 toolbar icon
 │   ├── icon48.png             # 48x48 extensions management icon
@@ -119,7 +133,7 @@ moratab/
 1. Open at least 4 to 6 different tabs.
 2. Click through 3 or 4 tabs in a specific order (e.g., Tab A, then Tab B, then Tab C).
 3. Look at the Moratab side panel:
-   - The top 3–5 most recently active tabs appear in the **Recent Tabs** section above the horizontal divider line (`#sectionSeparator`).
+   - The top recently active tabs (default 20, or your configured count in Settings) appear in the **Recent Tabs** section above the horizontal divider line (`#sectionSeparator`).
    - The remaining tabs appear in the **Remaining Tabs** section below the divider line.
 4. Switch to a tab from the remaining section: observe it dynamically promotes to the top of the **Recent Tabs** section, and the list updates smoothly.
 

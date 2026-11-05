@@ -516,10 +516,13 @@ export function buildSearchUrl(query) {
 export {
   CHROME_TAB_GROUP_COLORS,
   extractDomain,
+  getRootDomain,
   getDomainService,
+  classifyTabByUrl,
   matchesKeywords,
   containsPersian,
   detectLanguage,
+  shortenGroupName,
   buildGroupingPrompt,
   reconcileTabGroups,
   parseAndValidateGroupingResponse,

@@ -26,9 +26,9 @@ export class SidePanelController {
    * @param {Object} [chromeInstance] - Chrome API namespace or mock
    * @param {Object} [domElements] - Object containing DOM element references or mock
    * @param {Object} [utils] - Business logic utilities module
-   * @param {number} [maxRecent=10]
+   * @param {number} [maxRecent=20]
    */
-  constructor(chromeInstance = null, domElements = null, utils = null, maxRecent = 10) {
+  constructor(chromeInstance = null, domElements = null, utils = null, maxRecent = 20) {
     this.chrome = chromeInstance || (typeof chrome !== 'undefined' ? chrome : null);
     this.utils = {
       sortTabsByUrl,
@@ -43,23 +43,30 @@ export class SidePanelController {
       ...(utils || {}),
     };
 
+    const initialMaxRecent = typeof maxRecent === 'number' && !Number.isNaN(maxRecent) && maxRecent >= 0
+      ? maxRecent
+      : 20;
+
     this.dom = domElements || this._resolveDomElements();
-    this.recentTracker = new this.utils.RecentTabsTracker(maxRecent);
+    this.recentTracker = new this.utils.RecentTabsTracker(initialMaxRecent);
     this.isSorting = false;
     this.isSortedByUrl = false;
     this.currentSearchQuery = '';
     this.currentWindowId = null;
 
-    // AI Tab Grouping State
+    // AI Tab Grouping State & Settings
     this.isGrouping = false;
     this.aiSettings = {
+      maxRecent: initialMaxRecent,
       provider: 'auto',
       geminiApiKey: '',
-      geminiModel: 'gemini-2.5-flash',
+      geminiModel: 'gemini-2.0-flash-lite',
       ollamaEndpoint: 'http://localhost:11434',
       ollamaModel: 'gemma2',
       language: 'auto',
       unpinPinned: false,
+      minGroupSize: 5,
+      maxNameLength: 5,
     };
     this.tabGroupsMap = new Map();
     this.statusBannerTimer = null;
@@ -86,15 +93,21 @@ export class SidePanelController {
       settingsSaveBtn: document.getElementById('settingsSaveBtn'),
       aiStatusBanner: document.getElementById('aiStatusBanner'),
       aiStatusText: document.getElementById('aiStatusText'),
+      aiProgressTrack: document.getElementById('aiProgressTrack'),
+      aiProgressBar: document.getElementById('aiProgressBar'),
       aiStatusCloseBtn: document.getElementById('aiStatusCloseBtn'),
+      maxRecentSelect: document.getElementById('maxRecentSelect'),
+      maxRecentInput: document.getElementById('maxRecentInput'),
       aiProviderSelect: document.getElementById('aiProviderSelect'),
       geminiSettingsSection: document.getElementById('geminiSettingsSection'),
       geminiApiKeyInput: document.getElementById('geminiApiKeyInput'),
-      geminiModelSelect: document.getElementById('geminiModelSelect'),
+      geminiModelInput: document.getElementById('geminiModelInput') || document.getElementById('geminiModelSelect'),
+      geminiModelSelect: document.getElementById('geminiModelInput') || document.getElementById('geminiModelSelect'),
       ollamaSettingsSection: document.getElementById('ollamaSettingsSection'),
       ollamaEndpointInput: document.getElementById('ollamaEndpointInput'),
       ollamaModelInput: document.getElementById('ollamaModelInput'),
       languageSelect: document.getElementById('languageSelect'),
+      minGroupSizeSelect: document.getElementById('minGroupSizeSelect'),
       unpinPinnedCheckbox: document.getElementById('unpinPinnedCheckbox'),
       compactToggleBtn: document.getElementById('compactToggleBtn'),
       recentSection: document.getElementById('recentSection'),
@@ -252,6 +265,22 @@ export class SidePanelController {
     if (this.dom?.settingsSaveBtn?.addEventListener) {
       this.dom.settingsSaveBtn.addEventListener('click', async () => {
         await this.saveAiSettings();
+      });
+    }
+
+    // Max Recent Select Change
+    if (this.dom?.maxRecentSelect?.addEventListener) {
+      this.dom.maxRecentSelect.addEventListener('change', () => {
+        const isCustom = this.dom.maxRecentSelect.value === 'custom';
+        if (this.dom?.maxRecentInput?.style) {
+          this.dom.maxRecentInput.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && typeof this.dom.maxRecentInput.focus === 'function') {
+            this.dom.maxRecentInput.focus();
+          }
+        }
+        if (!isCustom && this.dom?.maxRecentInput) {
+          this.dom.maxRecentInput.value = this.dom.maxRecentSelect.value;
+        }
       });
     }
 
@@ -431,8 +460,8 @@ export class SidePanelController {
     }
 
     const allTabs = await this.getTabs();
-    // Pinned tabs must not be touched or grouped unless explicitly unpinned
-    const tabs = this.aiSettings.unpinPinned
+    // Group all tabs, unpinning pinned tabs only if explicitly enabled
+    const tabs = this.aiSettings.unpinPinned === true
       ? allTabs
       : allTabs.filter(t => !t.pinned);
 
@@ -441,7 +470,9 @@ export class SidePanelController {
 
     this.showStatusBanner(
       isFa ? 'در حال گروه‌بندی هوشمند تب‌ها در کروم...' : 'Grouping Chrome tabs with AI...',
-      'info'
+      'info',
+      0,
+      10
     );
 
     try {
@@ -455,11 +486,26 @@ export class SidePanelController {
       }
 
       const grouperFn = this.utils.groupTabs || groupTabs;
-      const result = await grouperFn(tabs, this.aiSettings);
+      const result = await grouperFn(tabs, {
+        ...this.aiSettings,
+        minGroupSize: Math.min(this.aiSettings.minGroupSize || 5, Math.floor(tabs.length / 2) || 1),
+        maxNameLength: 5,
+        unpinPinned: this.aiSettings.unpinPinned === true,
+        onProgress: ({ percent, message }) => {
+          this.showStatusBanner(message, 'info', 0, percent);
+        },
+      });
+
+      this.showStatusBanner(
+        isFa ? 'در حال اعمال گروه‌ها در نوار تب‌های کروم...' : 'Applying tab groups to Chrome...',
+        'info',
+        0,
+        95
+      );
 
       const applyFn = this.utils.applyTabGroupsToChrome || applyTabGroupsToChrome;
       await applyFn(this.chrome, result.groups, this.currentWindowId, {
-        unpinPinned: this.aiSettings.unpinPinned,
+        unpinPinned: this.aiSettings.unpinPinned === true,
       });
 
       await this._refreshTabGroups();
@@ -469,7 +515,7 @@ export class SidePanelController {
         ? `✨ تمام ${result.tabCount} تب در ${result.groupCount} گروه دسته‌بندی شدند (${result.providerUsed})`
         : `✨ Grouped all ${result.tabCount} tabs into ${result.groupCount} groups using ${result.providerUsed}!`;
 
-      this.showStatusBanner(successMsg, 'success', 6000);
+      this.showStatusBanner(successMsg, 'success', 6000, 100);
     } catch (err) {
       console.error('Failed to group tabs with AI:', err);
       const errorMsg = isFa
@@ -489,13 +535,14 @@ export class SidePanelController {
   }
 
   /**
-   * Displays the status banner with a message and auto-dismiss timer.
+   * Displays the status banner with a message, optional progress bar, and auto-dismiss timer.
    *
    * @param {string} text - Message text
    * @param {'info'|'success'|'error'} [type='info'] - Style category
    * @param {number} [autoHideMs=0] - Milliseconds before auto-hiding (0 = persistent)
+   * @param {number|null} [progress=null] - Optional progress percentage (0-100)
    */
-  showStatusBanner(text, type = 'info', autoHideMs = 0) {
+  showStatusBanner(text, type = 'info', autoHideMs = 0, progress = null) {
     if (!this.dom?.aiStatusBanner) return;
 
     if (this.statusBannerTimer) {
@@ -505,6 +552,23 @@ export class SidePanelController {
 
     if (this.dom.aiStatusText) {
       this.dom.aiStatusText.textContent = text;
+    }
+
+    if (this.dom.aiProgressTrack && this.dom.aiProgressBar) {
+      if (typeof progress === 'number' && progress >= 0 && progress < 100) {
+        this.dom.aiProgressTrack.style.display = 'block';
+        this.dom.aiProgressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+      } else if (progress === 100) {
+        this.dom.aiProgressTrack.style.display = 'block';
+        this.dom.aiProgressBar.style.width = '100%';
+        setTimeout(() => {
+          if (this.dom?.aiProgressTrack) {
+            this.dom.aiProgressTrack.style.display = 'none';
+          }
+        }, 1200);
+      } else {
+        this.dom.aiProgressTrack.style.display = 'none';
+      }
     }
 
     if (this.dom.aiStatusBanner.classList) {
@@ -562,14 +626,40 @@ export class SidePanelController {
    * @private
    */
   _populateSettingsForm() {
+    const currentMax = this.aiSettings.maxRecent ?? this.recentTracker.maxRecent ?? 20;
+    if (this.dom?.maxRecentSelect) {
+      const predefined = ['5', '10', '15', '20', '25', '30', '40', '50'];
+      const strVal = String(currentMax);
+      if (predefined.includes(strVal)) {
+        this.dom.maxRecentSelect.value = strVal;
+        if (this.dom?.maxRecentInput) {
+          this.dom.maxRecentInput.value = strVal;
+          if (this.dom.maxRecentInput.style) {
+            this.dom.maxRecentInput.style.display = 'none';
+          }
+        }
+      } else {
+        this.dom.maxRecentSelect.value = 'custom';
+        if (this.dom?.maxRecentInput) {
+          this.dom.maxRecentInput.value = strVal;
+          if (this.dom.maxRecentInput.style) {
+            this.dom.maxRecentInput.style.display = 'block';
+          }
+        }
+      }
+    } else if (this.dom?.maxRecentInput) {
+      this.dom.maxRecentInput.value = String(currentMax);
+    }
+
     if (this.dom?.aiProviderSelect) {
       this.dom.aiProviderSelect.value = this.aiSettings.provider || 'auto';
     }
     if (this.dom?.geminiApiKeyInput) {
       this.dom.geminiApiKeyInput.value = this.aiSettings.geminiApiKey || '';
     }
-    if (this.dom?.geminiModelSelect) {
-      this.dom.geminiModelSelect.value = this.aiSettings.geminiModel || 'gemini-2.5-flash';
+    const geminiModelEl = this.dom?.geminiModelInput || this.dom?.geminiModelSelect;
+    if (geminiModelEl) {
+      geminiModelEl.value = this.aiSettings.geminiModel || 'gemini-2.0-flash-lite';
     }
     if (this.dom?.ollamaEndpointInput) {
       this.dom.ollamaEndpointInput.value = this.aiSettings.ollamaEndpoint || 'http://localhost:11434';
@@ -579,6 +669,9 @@ export class SidePanelController {
     }
     if (this.dom?.languageSelect) {
       this.dom.languageSelect.value = this.aiSettings.language || 'auto';
+    }
+    if (this.dom?.minGroupSizeSelect) {
+      this.dom.minGroupSizeSelect.value = String(this.aiSettings.minGroupSize || 5);
     }
     if (this.dom?.unpinPinnedCheckbox) {
       this.dom.unpinPinnedCheckbox.checked = this.aiSettings.unpinPinned === true;
@@ -604,29 +697,62 @@ export class SidePanelController {
    * Saves AI settings from the form to memory and storage.
    */
   async saveAiSettings() {
+    let maxRecentVal = 20;
+    if (this.dom?.maxRecentSelect) {
+      if (this.dom.maxRecentSelect.value === 'custom') {
+        const parsed = parseInt(this.dom?.maxRecentInput?.value, 10);
+        if (!Number.isNaN(parsed) && parsed >= 0) {
+          maxRecentVal = parsed;
+        }
+      } else {
+        const parsed = parseInt(this.dom.maxRecentSelect.value, 10);
+        if (!Number.isNaN(parsed) && parsed >= 0) {
+          maxRecentVal = parsed;
+        }
+      }
+    } else if (this.dom?.maxRecentInput) {
+      const parsed = parseInt(this.dom.maxRecentInput.value, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        maxRecentVal = parsed;
+      }
+    }
+
+    const geminiModelEl = this.dom?.geminiModelInput || this.dom?.geminiModelSelect;
     this.aiSettings = {
+      maxRecent: maxRecentVal,
       provider: this.dom?.aiProviderSelect?.value || 'auto',
       geminiApiKey: this.dom?.geminiApiKeyInput?.value?.trim() || '',
-      geminiModel: this.dom?.geminiModelSelect?.value || 'gemini-2.5-flash',
+      geminiModel: geminiModelEl?.value?.trim() || 'gemini-2.0-flash-lite',
       ollamaEndpoint: this.dom?.ollamaEndpointInput?.value?.trim() || 'http://localhost:11434',
       ollamaModel: this.dom?.ollamaModelInput?.value?.trim() || 'gemma2',
       language: this.dom?.languageSelect?.value || 'auto',
       unpinPinned: this.dom?.unpinPinnedCheckbox ? this.dom.unpinPinnedCheckbox.checked : false,
+      minGroupSize: parseInt(this.dom?.minGroupSizeSelect?.value || '5', 10) || 5,
+      maxNameLength: 5,
     };
+
+    this.recentTracker.maxSize = maxRecentVal;
 
     if (this.chrome?.storage?.local) {
       try {
-        await this.chrome.storage.local.set({ moratab_ai_settings: this.aiSettings });
+        await this.chrome.storage.local.set({
+          moratab_ai_settings: this.aiSettings,
+          moratab_max_recent: maxRecentVal,
+        });
       } catch (err) {
         console.warn('Could not save settings to chrome.storage.local:', err);
       }
     } else if (typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem('moratab_ai_settings', JSON.stringify(this.aiSettings));
+        localStorage.setItem('moratab_max_recent', String(maxRecentVal));
       } catch {
         // ignore
       }
     }
+
+    await this._persistRecentIds();
+    await this.render();
 
     this.toggleSettingsModal(false);
     this.showStatusBanner('Settings saved successfully.', 'success', 3000);
@@ -636,11 +762,18 @@ export class SidePanelController {
    * Loads saved AI settings from persistent storage.
    */
   async loadAiSettings() {
+    let loadedMaxRecent = null;
     if (this.chrome?.storage?.local) {
       try {
-        const data = await this.chrome.storage.local.get('moratab_ai_settings');
+        const data = await this.chrome.storage.local.get(['moratab_ai_settings', 'moratab_max_recent']);
         if (data?.moratab_ai_settings) {
           this.aiSettings = { ...this.aiSettings, ...data.moratab_ai_settings };
+          if (data.moratab_ai_settings.maxRecent != null) {
+            loadedMaxRecent = data.moratab_ai_settings.maxRecent;
+          }
+        }
+        if (data?.moratab_max_recent != null) {
+          loadedMaxRecent = data.moratab_max_recent;
         }
       } catch {
         // ignore
@@ -649,10 +782,26 @@ export class SidePanelController {
       try {
         const stored = localStorage.getItem('moratab_ai_settings');
         if (stored) {
-          this.aiSettings = { ...this.aiSettings, ...JSON.parse(stored) };
+          const parsed = JSON.parse(stored);
+          this.aiSettings = { ...this.aiSettings, ...parsed };
+          if (parsed?.maxRecent != null) {
+            loadedMaxRecent = parsed.maxRecent;
+          }
+        }
+        const storedMax = localStorage.getItem('moratab_max_recent');
+        if (storedMax != null) {
+          loadedMaxRecent = Number(storedMax);
         }
       } catch {
         // ignore
+      }
+    }
+
+    if (loadedMaxRecent != null) {
+      const num = Number(loadedMaxRecent);
+      if (!Number.isNaN(num) && num >= 0) {
+        this.aiSettings.maxRecent = num;
+        this.recentTracker.maxSize = num;
       }
     }
   }

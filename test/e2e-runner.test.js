@@ -231,6 +231,7 @@ export class MockChrome {
     this.searchQueries = [];
     this.createdTabs = [];
     this.sessionStorage = new Map();
+    this.localStorage = new Map();
 
     this.tabs = {
       query: async (queryInfo = {}) => {
@@ -382,6 +383,30 @@ export class MockChrome {
     };
 
     this.storage = {
+      local: {
+        get: async (keys) => {
+          if (typeof keys === 'string') {
+            return { [keys]: this.localStorage.get(keys) };
+          }
+          if (Array.isArray(keys)) {
+            const res = {};
+            for (const k of keys) {
+              if (this.localStorage.has(k)) res[k] = this.localStorage.get(k);
+            }
+            return res;
+          }
+          const res = {};
+          for (const [k, v] of this.localStorage.entries()) {
+            res[k] = v;
+          }
+          return res;
+        },
+        set: async (items) => {
+          for (const [k, v] of Object.entries(items)) {
+            this.localStorage.set(k, v);
+          }
+        },
+      },
       session: {
         get: async (keys) => {
           if (typeof keys === 'string') {
@@ -550,17 +575,27 @@ export class MockSidePanelDOM {
     this.settingsSaveBtn = new MockElement('button', 'settingsSaveBtn');
     this.aiStatusBanner = new MockElement('div', 'aiStatusBanner');
     this.aiStatusText = new MockElement('span', 'aiStatusText');
+    this.aiProgressTrack = new MockElement('div', 'aiProgressTrack');
+    this.aiProgressBar = new MockElement('div', 'aiProgressBar');
     this.aiStatusCloseBtn = new MockElement('button', 'aiStatusCloseBtn');
     this.aiStatusBanner.appendChild(this.aiStatusText);
+    this.aiStatusBanner.appendChild(this.aiProgressTrack);
+    this.aiProgressTrack.appendChild(this.aiProgressBar);
     this.aiStatusBanner.appendChild(this.aiStatusCloseBtn);
+    this.maxRecentSelect = new MockElement('select', 'maxRecentSelect');
+    this.maxRecentSelect.value = '20';
+    this.maxRecentInput = new MockElement('input', 'maxRecentInput');
+    this.maxRecentInput.value = '20';
     this.aiProviderSelect = new MockElement('select', 'aiProviderSelect');
     this.geminiSettingsSection = new MockElement('div', 'geminiSettingsSection');
     this.geminiApiKeyInput = new MockElement('input', 'geminiApiKeyInput');
-    this.geminiModelSelect = new MockElement('select', 'geminiModelSelect');
+    this.geminiModelInput = new MockElement('input', 'geminiModelInput');
+    this.geminiModelSelect = this.geminiModelInput;
     this.ollamaSettingsSection = new MockElement('div', 'ollamaSettingsSection');
     this.ollamaEndpointInput = new MockElement('input', 'ollamaEndpointInput');
     this.ollamaModelInput = new MockElement('input', 'ollamaModelInput');
     this.languageSelect = new MockElement('select', 'languageSelect');
+    this.minGroupSizeSelect = new MockElement('select', 'minGroupSizeSelect');
     this.unpinPinnedCheckbox = new MockElement('input', 'unpinPinnedCheckbox');
     this.unpinPinnedCheckbox.checked = false;
     this.compactToggleBtn = new MockElement('button', 'compactToggleBtn');

@@ -4,10 +4,10 @@ import { SidePanelController } from '../sidepanel/sidepanel.js';
 import { MockChrome, MockSidePanelDOM } from './e2e-runner.test.js';
 
 describe('SidePanelController: Recent Tabs & Width Adaptations', () => {
-  it('initializes RecentTabsTracker with default 10 recent slots', () => {
+  it('initializes RecentTabsTracker with default 20 recent slots', () => {
     const ctrl = new SidePanelController(null, null, null);
-    assert.equal(ctrl.recentTracker.maxRecent, 10);
-    assert.equal(ctrl.recentTracker.maxSize, 10);
+    assert.equal(ctrl.recentTracker.maxRecent, 20);
+    assert.equal(ctrl.recentTracker.maxSize, 20);
   });
 
   it('allows overriding maxRecent in constructor', () => {
@@ -15,9 +15,9 @@ describe('SidePanelController: Recent Tabs & Width Adaptations', () => {
     assert.equal(ctrl.recentTracker.maxRecent, 15);
   });
 
-  it('partitions up to 10 recent tabs correctly', () => {
-    const ctrl = new SidePanelController(null, null, null, 10);
-    const tabs = Array.from({ length: 15 }, (_, i) => ({
+  it('partitions up to 20 recent tabs correctly by default', () => {
+    const ctrl = new SidePanelController(null, null, null);
+    const tabs = Array.from({ length: 25 }, (_, i) => ({
       id: i + 1,
       title: `Tab ${i + 1}`,
       url: `https://example.com/${i + 1}`,
@@ -27,8 +27,59 @@ describe('SidePanelController: Recent Tabs & Width Adaptations', () => {
     ctrl.recentTracker.initFromTabs(tabs);
     const partitioned = ctrl.recentTracker.partitionTabs(tabs);
 
-    assert.equal(partitioned.recentTabs.length, 10);
+    assert.equal(partitioned.recentTabs.length, 20);
     assert.equal(partitioned.remainingTabs.length, 5);
+  });
+
+  it('allows user to change and save recent tabs count in settings modal', async () => {
+    const chrome = new MockChrome(
+      Array.from({ length: 30 }, (_, i) => ({
+        id: i + 1,
+        title: `Tab ${i + 1}`,
+        url: `https://example.com/${i + 1}`,
+        lastAccessed: (i + 1) * 100,
+      }))
+    );
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    // Default is 20
+    assert.equal(ctrl.recentTracker.maxRecent, 20);
+
+    // Open settings and change maxRecentSelect to 5
+    ctrl.toggleSettingsModal(true);
+    dom.maxRecentSelect.value = '5';
+    await ctrl.saveAiSettings();
+
+    // Verify tracker updated to 5
+    assert.equal(ctrl.recentTracker.maxRecent, 5);
+    assert.equal(ctrl.recentTracker.maxSize, 5);
+    assert.equal(dom.recentList.children.length, 5);
+
+    // Test custom value in maxRecentInput
+    dom.maxRecentSelect.value = 'custom';
+    dom.maxRecentInput.value = '12';
+    await ctrl.saveAiSettings();
+
+    assert.equal(ctrl.recentTracker.maxRecent, 12);
+    assert.equal(ctrl.recentTracker.maxSize, 12);
+    assert.equal(dom.recentList.children.length, 12);
+  });
+
+  it('restores saved maxRecent setting on init from storage', async () => {
+    const chrome = new MockChrome([
+      { id: 1, title: 'Tab 1', url: 'https://example.com/1' },
+      { id: 2, title: 'Tab 2', url: 'https://example.com/2' },
+    ]);
+    await chrome.storage.local.set({
+      moratab_ai_settings: { maxRecent: 7 },
+    });
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    assert.equal(ctrl.recentTracker.maxRecent, 7);
   });
 });
 
