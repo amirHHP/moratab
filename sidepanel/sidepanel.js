@@ -385,6 +385,14 @@ export class SidePanelController {
           if (effectiveWinId != null && tab?.windowId != null && tab.windowId !== effectiveWinId) {
             return;
           }
+          if (tab?.id != null) {
+            if (typeof this.recentTracker.onTabCreated === 'function') {
+              this.recentTracker.onTabCreated(tab.id);
+            } else {
+              this.recentTracker.onTabActivated(tab.id);
+            }
+            await this._persistRecentIds();
+          }
           await this.render();
         });
       }
@@ -1071,12 +1079,12 @@ export class SidePanelController {
 
     // Child 0: Tab Title
     titleSpan.className = 'tab-title';
-    titleSpan.textContent = tab.title || tab.url || 'Untitled';
+    titleSpan.textContent = tab.title || tab.pendingUrl || tab.url || 'Untitled';
     li.appendChild(titleSpan);
 
     // Child 1: Tab URL
     urlSpan.className = 'tab-url';
-    urlSpan.textContent = tab.url || '';
+    urlSpan.textContent = tab.url || tab.pendingUrl || '';
     li.appendChild(urlSpan);
 
     // Child 2: Favicon Img

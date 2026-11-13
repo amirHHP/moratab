@@ -343,3 +343,53 @@ describe('SidePanelController: Donation Link Support', () => {
   });
 });
 
+describe('SidePanelController: New Tab Creation into Recent Tabs', () => {
+  it('adds newly created tab to recent tabs section and renders in recentList', async () => {
+    const chrome = new MockChrome([
+      { id: 1, title: 'Existing Tab 1', url: 'https://example.com/1', active: true },
+      { id: 2, title: 'Existing Tab 2', url: 'https://example.com/2', active: false },
+    ]);
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    // Initially, Tab 1 is active (in recents)
+    assert.equal(dom.recentList.children.length, 2);
+
+    // User opens a new tab in background (e.g. "Open link in new tab" with active: false)
+    const newTab = await chrome.tabs.create({
+      url: 'https://example.com/new-bg-tab',
+      title: 'New Background Tab',
+      active: false,
+    });
+    await new Promise(r => setTimeout(r, 10));
+
+    // Verify recentTracker includes the new tab at the top
+    const recentIds = ctrl.recentTracker.getRecentIds();
+    assert.equal(recentIds[0], newTab.id);
+
+    // Verify DOM recentList contains the new tab element at the top
+    assert.equal(dom.recentList.children[0].id, `tab-${newTab.id}`);
+    assert.equal(dom.recentList.children[0].dataset.tabId, String(newTab.id));
+  });
+
+  it('ignores tab creation from different window', async () => {
+    const chrome = new MockChrome([
+      { id: 1, title: 'Window 1 Tab', url: 'https://example.com/1', active: true },
+    ]);
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    // Tab created in windowId: 999
+    await chrome.tabs.create({
+      url: 'https://other-window.com',
+      title: 'Other Window Tab',
+      windowId: 999,
+    });
+
+    const recentIds = ctrl.recentTracker.getRecentIds();
+    assert.deepEqual(recentIds, [1]);
+  });
+});
+

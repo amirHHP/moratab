@@ -85,6 +85,10 @@ export class RefRecentTabsTracker {
     }
   }
 
+  onTabCreated(tabId) {
+    this.onTabActivated(tabId);
+  }
+
   onTabRemoved(tabId) {
     this.recentIds = this.recentIds.filter(id => id !== tabId);
   }
@@ -679,7 +683,14 @@ export class SidePanelController {
       await this.render();
     });
 
-    this.chrome.tabs.onCreated.addListener(async () => {
+    this.chrome.tabs.onCreated.addListener(async (tab) => {
+      if (tab?.id != null) {
+        if (typeof this.recentTracker.onTabCreated === 'function') {
+          this.recentTracker.onTabCreated(tab.id);
+        } else {
+          this.recentTracker.onTabActivated(tab.id);
+        }
+      }
       await this.render();
     });
   }

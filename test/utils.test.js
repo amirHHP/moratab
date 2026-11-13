@@ -288,12 +288,29 @@ describe('Recent Tabs: RecentTabsTracker', () => {
     assert.deepEqual(tracker.getRecentIds(), [3, 2, 1]);
   });
 
-  it('ignores invalid IDs in onTabActivated and onTabRemoved', () => {
+  it('records newly created tab at position 0 via onTabCreated', () => {
+    const tabs = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    tracker.initFromTabs(tabs);
+
+    tracker.onTabCreated(4);
+    assert.deepEqual(tracker.getRecentIds(), [4, 1, 2, 3]);
+
+    // Creating already-known tab moves it to 0 without duplicates
+    tracker.onTabCreated(2);
+    assert.deepEqual(tracker.getRecentIds(), [2, 4, 1, 3]);
+  });
+
+  it('ignores invalid IDs in onTabActivated, onTabCreated, and onTabRemoved', () => {
     tracker.initFromTabs([{ id: 1 }, { id: 2 }]);
     tracker.onTabActivated(-1);
     tracker.onTabActivated(NaN);
     tracker.onTabActivated(null);
     tracker.onTabActivated('invalid');
+
+    tracker.onTabCreated(-1);
+    tracker.onTabCreated(NaN);
+    tracker.onTabCreated(null);
+    tracker.onTabCreated('invalid');
     assert.deepEqual(tracker.getRecentIds(), [1, 2]);
 
     tracker.onTabRemoved(-1);

@@ -292,6 +292,16 @@ export class RecentTabsTracker {
   }
 
   /**
+   * Records a newly created tab event by unshifting tabId to position 0.
+   * Deduplicates existing instances and enforces capacity limits.
+   *
+   * @param {number} tabId - Created tab ID
+   */
+  onTabCreated(tabId) {
+    this.onTabActivated(tabId);
+  }
+
+  /**
    * Removes a closed tab ID from the recent stack.
    *
    * @param {number} tabId - Removed tab ID
@@ -394,7 +404,8 @@ export function filterTabs(tabs, query) {
   return tabs.filter((tab) => {
     if (!tab || typeof tab !== 'object') return false;
     const title = (typeof tab.title === 'string' ? tab.title : '').toLowerCase();
-    const url = (typeof tab.url === 'string' ? tab.url : '').toLowerCase();
+    const rawUrl = typeof tab.url === 'string' && tab.url ? tab.url : (typeof tab.pendingUrl === 'string' ? tab.pendingUrl : '');
+    const url = rawUrl.toLowerCase();
 
     let decodedUrl = '';
     try {
