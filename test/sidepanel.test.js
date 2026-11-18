@@ -393,3 +393,94 @@ describe('SidePanelController: New Tab Creation into Recent Tabs', () => {
   });
 });
 
+describe('SidePanelController: User-Specified Group Count Settings', () => {
+  it('initializes with default groupCount: "auto"', () => {
+    const ctrl = new SidePanelController(null, null, null);
+    assert.equal(ctrl.aiSettings.groupCount, 'auto');
+  });
+
+  it('allows user to change and save groupCount in settings modal', async () => {
+    const chrome = new MockChrome([
+      { id: 1, title: 'Tab 1', url: 'https://example.com/1' },
+      { id: 2, title: 'Tab 2', url: 'https://example.com/2' },
+    ]);
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    // Default is auto
+    assert.equal(ctrl.aiSettings.groupCount, 'auto');
+
+    // Open settings and set groupCountSelect to 3
+    ctrl.toggleSettingsModal(true);
+    dom.groupCountSelect.value = '3';
+    await ctrl.saveAiSettings();
+
+    assert.equal(ctrl.aiSettings.groupCount, 3);
+    assert.equal(dom.aiGroupBtn.getAttribute('title'), 'Group all Chrome tabs into 3 groups using AI');
+
+    // Select custom count = 6
+    dom.groupCountSelect.value = 'custom';
+    dom.groupCountInput.value = '6';
+    await ctrl.saveAiSettings();
+
+    assert.equal(ctrl.aiSettings.groupCount, 6);
+    assert.equal(dom.aiGroupBtn.getAttribute('title'), 'Group all Chrome tabs into 6 groups using AI');
+
+    // Reset back to auto
+    dom.groupCountSelect.value = 'auto';
+    await ctrl.saveAiSettings();
+
+    assert.equal(ctrl.aiSettings.groupCount, 'auto');
+    assert.equal(dom.aiGroupBtn.getAttribute('title'), 'Group all Chrome tabs using on-device Gemma or AI API');
+  });
+
+  it('restores saved groupCount from storage on init', async () => {
+    const chrome = new MockChrome([
+      { id: 1, title: 'Tab 1', url: 'https://example.com/1' },
+    ]);
+    await chrome.storage.local.set({
+      moratab_ai_settings: { groupCount: 4 },
+    });
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom);
+    await ctrl.init();
+
+    assert.equal(ctrl.aiSettings.groupCount, 4);
+    assert.equal(dom.aiGroupBtn.getAttribute('title'), 'Group all Chrome tabs into 4 groups using AI');
+  });
+
+  it('passes configured groupCount to grouper function in handleAiGroup', async () => {
+    let capturedOptions = null;
+    const mockUtils = {
+      groupTabs: async (tabs, options) => {
+        capturedOptions = options;
+        return {
+          groups: [
+            { name: 'G1', color: 'blue', tabIds: [1] },
+            { name: 'G2', color: 'green', tabIds: [2] },
+          ],
+          providerUsed: 'Mock',
+          tabCount: 2,
+          groupCount: 2,
+        };
+      },
+      applyTabGroupsToChrome: async () => {},
+    };
+
+    const chrome = new MockChrome([
+      { id: 1, title: 'Tab 1', url: 'https://example.com/1' },
+      { id: 2, title: 'Tab 2', url: 'https://example.com/2' },
+    ]);
+    const dom = new MockSidePanelDOM();
+    const ctrl = new SidePanelController(chrome, dom, mockUtils);
+    ctrl.aiSettings.groupCount = 2;
+    await ctrl.init();
+
+    await ctrl.handleAiGroup();
+
+    assert.ok(capturedOptions, 'groupTabs must be called');
+    assert.equal(capturedOptions.groupCount, 2, 'Must pass groupCount: 2 to groupTabs');
+  });
+});
+

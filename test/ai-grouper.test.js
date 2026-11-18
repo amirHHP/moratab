@@ -723,3 +723,130 @@ describe('AI Grouper: Deep URL & Address Inspection (getRootDomain & classifyTab
     assert.ok(!groups.some(g => g.name === 'Other'), 'Must NOT group SEC and financial tabs into Other!');
   });
 });
+
+describe('AI Grouper: User-Specified Group Count (groupCount)', () => {
+  it('buildGroupingPrompt instructs model to create exact number of groups when groupCount is specified', () => {
+    const tabs = [
+      { id: 1, title: 'GitHub', url: 'https://github.com' },
+      { id: 2, title: 'YouTube', url: 'https://youtube.com' },
+      { id: 3, title: 'Docs', url: 'https://docs.google.com' },
+      { id: 4, title: 'Sheets', url: 'https://sheets.google.com' },
+      { id: 5, title: 'News', url: 'https://bbc.com' },
+      { id: 6, title: 'SEC Filing', url: 'https://sec.gov/edgar' },
+    ];
+
+    const promptWithTarget = buildGroupingPrompt(tabs, { groupCount: 3 });
+    assert.ok(promptWithTarget.includes('EXACTLY 3 logical, thematic groups'), 'Prompt should state exact group count');
+    assert.ok(promptWithTarget.includes('You MUST create EXACTLY 3 groups total'), 'Prompt rule 4 should enforce exact count');
+
+    const promptAuto = buildGroupingPrompt(tabs, { groupCount: 'auto' });
+    assert.ok(promptAuto.includes('2 to 7 logical, thematic groups'), 'Auto mode should retain default 2 to 7 groups instruction');
+  });
+
+  it('reconcileTabGroups merges groups when AI produces more groups than requested', () => {
+    const tabs = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      title: `Tab ${i + 1}`,
+      url: `https://example${(i % 5) + 1}.com/page`,
+    }));
+
+    // AI returned 5 groups
+    const rawGroups = [
+      { name: 'Group 1', color: 'blue', tabIds: [1, 2, 3] },
+      { name: 'Group 2', color: 'green', tabIds: [4, 5] },
+      { name: 'Group 3', color: 'red', tabIds: [6, 7] },
+      { name: 'Group 4', color: 'yellow', tabIds: [8, 9] },
+      { name: 'Group 5', color: 'purple', tabIds: [10, 11, 12] },
+    ];
+
+    // User wants exactly 3 groups
+    const reconciled = reconcileTabGroups(rawGroups, tabs, { groupCount: 3 });
+    assert.equal(reconciled.length, 3, 'Must have exactly 3 groups');
+
+    const assignedIds = reconciled.flatMap(g => g.tabIds);
+    assert.equal(assignedIds.length, 12, 'All 12 tabs must be preserved');
+    for (let id = 1; id <= 12; id++) {
+      assert.ok(assignedIds.includes(id), `Tab ${id} must be assigned`);
+    }
+  });
+
+  it('reconcileTabGroups splits groups when AI produces fewer groups than requested', () => {
+    const tabs = [
+      { id: 1, title: 'GitHub 1', url: 'https://github.com/repo1' },
+      { id: 2, title: 'GitHub 2', url: 'https://github.com/repo2' },
+      { id: 3, title: 'GitHub 3', url: 'https://github.com/repo3' },
+      { id: 4, title: 'YouTube 1', url: 'https://youtube.com/watch?v=1' },
+      { id: 5, title: 'YouTube 2', url: 'https://youtube.com/watch?v=2' },
+      { id: 6, title: 'BBC News', url: 'https://bbc.com/news' },
+      { id: 7, title: 'CNN News', url: 'https://cnn.com' },
+      { id: 8, title: 'Wikipedia', url: 'https://wikipedia.org/wiki/Test' },
+    ];
+
+    // AI returned only 1 giant group
+    const rawGroups = [
+      { name: 'All', color: 'blue', tabIds: [1, 2, 3, 4, 5, 6, 7, 8] },
+    ];
+
+    // User requested 4 groups
+    const reconciled = reconcileTabGroups(rawGroups, tabs, { groupCount: 4 });
+    assert.equal(reconciled.length, 4, 'Must split into exactly 4 groups');
+
+    const assignedIds = reconciled.flatMap(g => g.tabIds);
+    assert.equal(assignedIds.length, 8, 'All 8 tabs must be preserved');
+    for (let id = 1; id <= 8; id++) {
+      assert.ok(assignedIds.includes(id), `Tab ${id} must be assigned`);
+    }
+  });
+
+  it('reconcileTabGroups bounds groupCount to tab count when tabs < requested groups', () => {
+    const tabs = [
+      { id: 1, title: 'A', url: 'https://a.com' },
+      { id: 2, title: 'B', url: 'https://b.com' },
+    ];
+
+    // User requested 5 groups for only 2 tabs
+    const reconciled = reconcileTabGroups([], tabs, { groupCount: 5 });
+    assert.equal(reconciled.length, 2, 'Cannot have more groups than tabs; should bound to tab count');
+    assert.equal(reconciled[0].tabIds.length, 1);
+    assert.equal(reconciled[1].tabIds.length, 1);
+  });
+
+  it('clusterTabsHeuristic respects groupCount in rule-based offline clustering', () => {
+    const tabs = [
+      { id: 1, title: 'GitHub Repo 1', url: 'https://github.com/a' },
+      { id: 2, title: 'GitHub Repo 2', url: 'https://github.com/b' },
+      { id: 3, title: 'YouTube Video 1', url: 'https://youtube.com/watch?v=1' },
+      { id: 4, title: 'YouTube Video 2', url: 'https://youtube.com/watch?v=2' },
+      { id: 5, title: 'Google Docs', url: 'https://docs.google.com/document/d/1' },
+      { id: 6, title: 'Google Sheets', url: 'https://sheets.google.com/spreadsheets/d/1' },
+      { id: 7, title: 'BBC News', url: 'https://bbc.com/news' },
+      { id: 8, title: 'Wikipedia', url: 'https://wikipedia.org/wiki/1' },
+      { id: 9, title: 'Amazon Product', url: 'https://amazon.com/dp/1' },
+      { id: 10, title: 'Digikala', url: 'https://digikala.com/product/1' },
+    ];
+
+    const twoGroups = clusterTabsHeuristic(tabs, { groupCount: 2 });
+    assert.equal(twoGroups.length, 2, 'Should cluster into exactly 2 groups');
+    assert.equal(twoGroups.flatMap(g => g.tabIds).length, 10);
+
+    const fourGroups = clusterTabsHeuristic(tabs, { groupCount: 4 });
+    assert.equal(fourGroups.length, 4, 'Should cluster into exactly 4 groups');
+    assert.equal(fourGroups.flatMap(g => g.tabIds).length, 10);
+  });
+
+  it('groupTabs produces exact groupCount and returns groupCount in result', async () => {
+    const tabs = [
+      { id: 1, title: 'GitHub', url: 'https://github.com' },
+      { id: 2, title: 'StackOverflow', url: 'https://stackoverflow.com' },
+      { id: 3, title: 'YouTube', url: 'https://youtube.com' },
+      { id: 4, title: 'BBC News', url: 'https://bbc.com' },
+      { id: 5, title: 'Wikipedia', url: 'https://wikipedia.org' },
+      { id: 6, title: 'Amazon', url: 'https://amazon.com' },
+    ];
+
+    const result = await groupTabs(tabs, { groupCount: 3 });
+    assert.equal(result.groupCount, 3);
+    assert.equal(result.groups.length, 3);
+    assert.equal(result.tabCount, 6);
+  });
+});

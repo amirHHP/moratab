@@ -171,6 +171,30 @@
           </div>
 
           <div class="setting-field">
+            <label for="groupCountSelect">Number of Tab Groups (تعداد گروه‌ها)</label>
+            <select id="groupCountSelect">
+              <option value="auto" selected>Auto (2-7 groups / خودکار)</option>
+              <option value="2">2 groups</option>
+              <option value="3">3 groups</option>
+              <option value="4">4 groups</option>
+              <option value="5">5 groups</option>
+              <option value="6">6 groups</option>
+              <option value="7">7 groups</option>
+              <option value="8">8 groups</option>
+              <option value="custom">Custom...</option>
+            </select>
+            <input
+              type="number"
+              id="groupCountInput"
+              min="1"
+              max="20"
+              value="3"
+              placeholder="Enter number of groups (e.g. 3)"
+              style="display: none; margin-top: 4px;"
+            >
+          </div>
+
+          <div class="setting-field">
             <label for="minGroupSizeSelect">Minimum Tabs per Group</label>
             <select id="minGroupSizeSelect">
               <option value="3">3 tabs (Breaks down 'Other' into more groups)</option>

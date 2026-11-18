@@ -689,6 +689,13 @@ export function buildGroupingPrompt(tabs, options = {}) {
   const minGroupSize = typeof options.minGroupSize === 'number' ? options.minGroupSize : 5;
   const maxNameLength = typeof options.maxNameLength === 'number' ? options.maxNameLength : 5;
 
+  const rawGroupCount = options.groupCount ?? options.targetGroupCount;
+  const targetGroupCount = (typeof rawGroupCount === 'number' && rawGroupCount > 0)
+    ? Math.min(rawGroupCount, tabs.length)
+    : (rawGroupCount && rawGroupCount !== 'auto' && !Number.isNaN(parseInt(rawGroupCount, 10)) && parseInt(rawGroupCount, 10) > 0
+        ? Math.min(parseInt(rawGroupCount, 10), tabs.length)
+        : null);
+
   const simplifiedTabs = tabs.map((t) => {
     let path = '';
     try {
@@ -709,7 +716,24 @@ export function buildGroupingPrompt(tabs, options = {}) {
     ? `زبان نام‌گذاری (فارسی): حتماً نام گروه‌ها را بسیار کوتاه و حداکثر ۵ حرف بنویسید (مثلاً: "سِک"، "مالی"، "کد"، "سند"، "کار"، "هوش"، "چت"، "مدیا"، "خرید"، "خبر"، "سایر"). تحت هیچ شرایطی نام گروه نباید از ۵ حرف بیشتر شود.`
     : `Language: Name the groups in extremely concise English with AT MOST ${maxNameLength} CHARACTERS (e.g., "SEC", "Fin", "Code", "Docs", "Work", "AI", "Chat", "Media", "Shop", "News", "Other"). NEVER exceed ${maxNameLength} characters!`;
 
-  return `You are an expert browser tab organizer. Organize the following ${tabs.length} Chrome tabs into 2 to 7 logical, thematic groups based on topic, project, purpose, or domain.
+  const openingInstruction = targetGroupCount != null
+    ? `You are an expert browser tab organizer. Organize the following ${tabs.length} Chrome tabs into EXACTLY ${targetGroupCount} logical, thematic groups based on topic, project, purpose, or domain.`
+    : `You are an expert browser tab organizer. Organize the following ${tabs.length} Chrome tabs into 2 to 7 logical, thematic groups based on topic, project, purpose, or domain.`;
+
+  const effectiveMinGroupSize = targetGroupCount != null
+    ? Math.max(1, Math.min(minGroupSize, Math.floor(tabs.length / targetGroupCount) || 1))
+    : minGroupSize;
+
+  const rule2Instruction = targetGroupCount != null
+    ? `2. MINIMUM GROUP SIZE & BALANCED GROUPS: Distribute all ${tabs.length} tabs evenly across the ${targetGroupCount} groups (each group should ideally contain at least ${effectiveMinGroupSize} tab${effectiveMinGroupSize > 1 ? 's' : ''}).`
+    : `2. MINIMUM GROUP SIZE & BALANCED GROUPS: Every group MUST contain AT LEAST ${minGroupSize} tabs. NEVER create a group with fewer than ${minGroupSize} tabs!
+   CRITICAL: Do NOT dump many tabs into an oversized "Other" group! Instead of an oversized "Other" group with 15+ tabs, combine related tabs into broader logical categories (e.g., "SEC", "Fin", "Code", "Docs", "Work", "AI", "Tools", "Media", "Shop", "News", "Chat", "Read"). The "Other" ("سایر") group must remain small (at most 3-5 tabs).`;
+
+  const rule4Instruction = targetGroupCount != null
+    ? `4. TOTAL NUMBER OF GROUPS: You MUST create EXACTLY ${targetGroupCount} groups total. Do NOT create more or fewer than ${targetGroupCount} groups!`
+    : `4. TOTAL NUMBER OF GROUPS: Create between 2 and 7 groups total. Do NOT create more than 7 groups!`;
+
+  return `${openingInstruction}
 
 CRITICAL RULES:
 1. STRICT ADDRESS & URL PATH ANALYSIS: Inspect the full URL path, domain, and subdomains of every tab. Look for specific categories such as:
@@ -721,10 +745,9 @@ CRITICAL RULES:
    - Shopping & commerce (Amazon, Digikala, Torob) -> name "Shop".
    - News & reading (Wikipedia, Medium, news outlets) -> name "News" or "Read".
    - Social & chat (Telegram, WhatsApp, Slack, X, Discord) -> name "Chat".
-2. MINIMUM GROUP SIZE & BALANCED GROUPS: Every group MUST contain AT LEAST ${minGroupSize} tabs. NEVER create a group with fewer than ${minGroupSize} tabs!
-   CRITICAL: Do NOT dump many tabs into an oversized "Other" group! Instead of an oversized "Other" group with 15+ tabs, combine related tabs into broader logical categories (e.g., "SEC", "Fin", "Code", "Docs", "Work", "AI", "Tools", "Media", "Shop", "News", "Chat", "Read"). The "Other" ("سایر") group must remain small (at most 3-5 tabs).
+${rule2Instruction}
 3. GROUP NAME LENGTH: Every group name MUST be AT MOST ${maxNameLength} CHARACTERS long. Use short punchy words. ${langInstruction} NEVER exceed ${maxNameLength} characters!
-4. TOTAL NUMBER OF GROUPS: Create between 2 and 7 groups total. Do NOT create more than 7 groups!
+${rule4Instruction}
 5. DOMAINS WITH >= 5 TABS: If a specific domain has 5 or more tabs (e.g. SEC, Notion, Google Sheets, GitHub, YouTube), group them together using a short name <= 5 chars (e.g. "SEC", "Notes", "Sheet", "Git", "Video").
 6. EVERY SINGLE TAB MUST BE GROUPED: Every tab ID in the input list must appear in exactly ONE group's "tabIds" array. No tab ID may be omitted or duplicated.
 7. Group Colors: Assign a distinct color to each group from this exact list: ["blue", "cyan", "green", "yellow", "orange", "red", "pink", "purple", "grey"].
@@ -760,11 +783,23 @@ export function reconcileTabGroups(rawGroups, originalTabs, options = {}) {
   const assignedIds = new Set();
   const lang = options.language === 'fa' ? 'fa' : (options.language === 'en' ? 'en' : detectLanguage(validTabs));
 
+  const rawGroupCount = options.groupCount ?? options.targetGroupCount;
+  const targetGroupCount = (typeof rawGroupCount === 'number' && rawGroupCount > 0)
+    ? Math.min(rawGroupCount, validTabs.length)
+    : (rawGroupCount && rawGroupCount !== 'auto' && !Number.isNaN(parseInt(rawGroupCount, 10)) && parseInt(rawGroupCount, 10) > 0
+        ? Math.min(parseInt(rawGroupCount, 10), validTabs.length)
+        : null);
+
   const minGroupSize = typeof options.minGroupSize === 'number'
     ? (validTabs.length >= options.minGroupSize
         ? options.minGroupSize
         : Math.min(2, validTabs.length))
     : 1;
+
+  const effectiveMinGroupSize = targetGroupCount != null
+    ? Math.max(1, Math.min(minGroupSize, Math.floor(validTabs.length / targetGroupCount) || 1))
+    : minGroupSize;
+
   const maxNameLength = typeof options.maxNameLength === 'number'
     ? options.maxNameLength
     : 35;
@@ -813,11 +848,11 @@ export function reconcileTabGroups(rawGroups, originalTabs, options = {}) {
     }
   }
 
-  // Filter groups: enforce minGroupSize if minGroupSize > 1
+  // Filter groups: enforce minGroupSize if effectiveMinGroupSize > 1
   const survivingGroups = [];
-  if (minGroupSize > 1) {
+  if (effectiveMinGroupSize > 1) {
     for (const grp of sanitizedGroups) {
-      if (grp.tabIds.length >= minGroupSize) {
+      if (grp.tabIds.length >= effectiveMinGroupSize) {
         survivingGroups.push(grp);
       } else {
         // Disband small group: release tab IDs for merging into surviving groups
@@ -1035,6 +1070,164 @@ export function reconcileTabGroups(rawGroups, originalTabs, options = {}) {
     }
   }
 
+  // Enforce exact targetGroupCount if specified by the user
+  if (targetGroupCount != null && targetGroupCount >= 1 && validTabs.length > 0) {
+    const effectiveTarget = Math.min(targetGroupCount, validTabs.length);
+
+    // CASE A: More groups than requested -> Merge groups until count reaches effectiveTarget
+    while (survivingGroups.length > effectiveTarget) {
+      // Pick the smallest group as the source to merge
+      let smallestIdx = 0;
+      for (let i = 1; i < survivingGroups.length; i++) {
+        if (survivingGroups[i].tabIds.length < survivingGroups[smallestIdx].tabIds.length) {
+          smallestIdx = i;
+        }
+      }
+      const source = survivingGroups[smallestIdx];
+
+      // Find the best destination group for source
+      let bestDestIdx = -1;
+      let highestScore = -1;
+
+      for (let i = 0; i < survivingGroups.length; i++) {
+        if (i === smallestIdx) continue;
+        const candidate = survivingGroups[i];
+        let score = 0;
+
+        for (const sId of source.tabIds) {
+          const sTab = validTabMap.get(sId);
+          if (!sTab) continue;
+          const sDomain = getRootDomain(sTab.url) || extractDomain(sTab.url);
+          const sCat = classifyTabByUrl(sTab).categoryId;
+
+          for (const cId of candidate.tabIds) {
+            const cTab = validTabMap.get(cId);
+            if (!cTab) continue;
+            const cDomain = getRootDomain(cTab.url) || extractDomain(cTab.url);
+            const cCat = classifyTabByUrl(cTab).categoryId;
+
+            if (sDomain && sDomain !== 'other' && sDomain === cDomain) {
+              score += 10;
+            } else if (sCat && sCat !== 'other' && sCat === cCat) {
+              score += 5;
+            } else if (
+              (sCat === 'sec' && cCat === 'fin') || (sCat === 'fin' && cCat === 'sec') ||
+              (sCat === 'news' && cCat === 'read') || (sCat === 'read' && cCat === 'news')
+            ) {
+              score += 3;
+            }
+          }
+        }
+
+        if (score > highestScore) {
+          highestScore = score;
+          bestDestIdx = i;
+        }
+      }
+
+      // If no domain/category match found, merge into the smallest remaining group to keep balance
+      if (bestDestIdx === -1 || highestScore === 0) {
+        let minRemainingSize = Infinity;
+        for (let i = 0; i < survivingGroups.length; i++) {
+          if (i === smallestIdx) continue;
+          if (survivingGroups[i].tabIds.length < minRemainingSize) {
+            minRemainingSize = survivingGroups[i].tabIds.length;
+            bestDestIdx = i;
+          }
+        }
+      }
+
+      if (bestDestIdx === -1) {
+        bestDestIdx = smallestIdx === 0 ? 1 : 0;
+      }
+
+      // If destination is generic 'Other' and source has a specific topic, inherit source name
+      if ((survivingGroups[bestDestIdx].name.toLowerCase().includes('other') || survivingGroups[bestDestIdx].name === 'سایر') &&
+          (!source.name.toLowerCase().includes('other') && source.name !== 'سایر')) {
+        survivingGroups[bestDestIdx].name = source.name;
+        survivingGroups[bestDestIdx].color = source.color;
+      }
+
+      survivingGroups[bestDestIdx].tabIds.push(...source.tabIds);
+      survivingGroups.splice(smallestIdx, 1);
+    }
+
+    // CASE B: Fewer groups than requested -> Split largest group until count reaches effectiveTarget
+    let colorCursor = survivingGroups.length;
+    while (survivingGroups.length < effectiveTarget) {
+      let largestIdx = -1;
+      let maxTabs = 1;
+      for (let i = 0; i < survivingGroups.length; i++) {
+        if (survivingGroups[i].tabIds.length > maxTabs) {
+          maxTabs = survivingGroups[i].tabIds.length;
+          largestIdx = i;
+        }
+      }
+
+      if (largestIdx === -1) {
+        break;
+      }
+
+      const groupToSplit = survivingGroups[largestIdx];
+      const tabsInGroup = groupToSplit.tabIds.map(id => validTabMap.get(id)).filter(Boolean);
+
+      let splitTabIds = [];
+      const distinctDomainMap = new Map();
+      for (const t of tabsInGroup) {
+        const root = getRootDomain(t.url) || extractDomain(t.url) || 'other';
+        if (!distinctDomainMap.has(root)) distinctDomainMap.set(root, []);
+        distinctDomainMap.get(root).push(t.id);
+      }
+
+      if (distinctDomainMap.size > 1) {
+        const entries = Array.from(distinctDomainMap.entries());
+        splitTabIds = entries[1][1];
+      } else {
+        const splitPoint = Math.ceil(groupToSplit.tabIds.length / 2);
+        splitTabIds = groupToSplit.tabIds.slice(splitPoint);
+      }
+
+      if (splitTabIds.length === 0 || splitTabIds.length >= groupToSplit.tabIds.length) {
+        const splitPoint = Math.max(1, Math.floor(groupToSplit.tabIds.length / 2));
+        splitTabIds = groupToSplit.tabIds.slice(splitPoint);
+      }
+
+      const splitSet = new Set(splitTabIds);
+      groupToSplit.tabIds = groupToSplit.tabIds.filter(id => !splitSet.has(id));
+
+      const firstTabOfNewGroup = validTabMap.get(splitTabIds[0]);
+      let newName = '';
+      if (firstTabOfNewGroup) {
+        const service = getDomainService(firstTabOfNewGroup.url, firstTabOfNewGroup.title);
+        const classification = classifyTabByUrl(firstTabOfNewGroup);
+        if (classification.categoryId !== 'other') {
+          newName = lang === 'fa' ? classification.nameFa : classification.nameEn;
+        } else if (service.displayName && service.displayName !== 'Other') {
+          newName = service.displayName;
+        }
+      }
+
+      if (!newName || newName === groupToSplit.name) {
+        newName = `${groupToSplit.name} 2`;
+      }
+
+      newName = shortenGroupName(newName, lang, maxNameLength);
+
+      const usedColors = new Set(survivingGroups.map(g => g.color));
+      let newColor = CHROME_TAB_GROUP_COLORS.find(c => !usedColors.has(c));
+      if (!newColor) {
+        newColor = CHROME_TAB_GROUP_COLORS[colorCursor % CHROME_TAB_GROUP_COLORS.length];
+        colorCursor++;
+      }
+
+      survivingGroups.push({
+        name: newName,
+        color: newColor,
+        tabIds: splitTabIds,
+      });
+    }
+  }
+
   // Ensure all surviving group names satisfy maxNameLength
   for (const g of survivingGroups) {
     if (maxNameLength <= 5) {
@@ -1099,12 +1292,26 @@ export function clusterTabsHeuristic(tabs, options = {}) {
   if (validTabs.length === 0) return [];
 
   const lang = options.language === 'fa' ? 'fa' : (options.language === 'en' ? 'en' : detectLanguage(validTabs));
-  const domainThreshold = typeof options.domainThreshold === 'number' ? options.domainThreshold : 5;
-  const minThreshold = typeof options.minGroupSize === 'number'
-    ? (validTabs.length >= options.minGroupSize
-        ? options.minGroupSize
-        : Math.min(2, validTabs.length))
-    : 2;
+
+  const rawGroupCount = options.groupCount ?? options.targetGroupCount;
+  const targetGroupCount = (typeof rawGroupCount === 'number' && rawGroupCount > 0)
+    ? Math.min(rawGroupCount, validTabs.length)
+    : (rawGroupCount && rawGroupCount !== 'auto' && !Number.isNaN(parseInt(rawGroupCount, 10)) && parseInt(rawGroupCount, 10) > 0
+        ? Math.min(parseInt(rawGroupCount, 10), validTabs.length)
+        : null);
+
+  const domainThreshold = targetGroupCount != null
+    ? Math.max(2, Math.floor(validTabs.length / targetGroupCount))
+    : (typeof options.domainThreshold === 'number' ? options.domainThreshold : 5);
+
+  const minThreshold = targetGroupCount != null
+    ? Math.max(1, Math.min(typeof options.minGroupSize === 'number' ? options.minGroupSize : 5, Math.floor(validTabs.length / targetGroupCount) || 1))
+    : (typeof options.minGroupSize === 'number'
+        ? (validTabs.length >= options.minGroupSize
+            ? options.minGroupSize
+            : Math.min(2, validTabs.length))
+        : 2);
+
   const maxChars = typeof options.maxNameLength === 'number' ? options.maxNameLength : 35;
 
   const assignedIds = new Set();

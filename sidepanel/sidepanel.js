@@ -58,6 +58,7 @@ export class SidePanelController {
     this.isGrouping = false;
     this.aiSettings = {
       maxRecent: initialMaxRecent,
+      groupCount: 'auto',
       provider: 'auto',
       geminiApiKey: '',
       geminiModel: 'gemini-2.0-flash-lite',
@@ -109,6 +110,8 @@ export class SidePanelController {
       ollamaEndpointInput: document.getElementById('ollamaEndpointInput'),
       ollamaModelInput: document.getElementById('ollamaModelInput'),
       languageSelect: document.getElementById('languageSelect'),
+      groupCountSelect: document.getElementById('groupCountSelect'),
+      groupCountInput: document.getElementById('groupCountInput'),
       minGroupSizeSelect: document.getElementById('minGroupSizeSelect'),
       unpinPinnedCheckbox: document.getElementById('unpinPinnedCheckbox'),
       compactToggleBtn: document.getElementById('compactToggleBtn'),
@@ -296,6 +299,22 @@ export class SidePanelController {
         }
         if (!isCustom && this.dom?.maxRecentInput) {
           this.dom.maxRecentInput.value = this.dom.maxRecentSelect.value;
+        }
+      });
+    }
+
+    // Group Count Select Change
+    if (this.dom?.groupCountSelect?.addEventListener) {
+      this.dom.groupCountSelect.addEventListener('change', () => {
+        const isCustom = this.dom.groupCountSelect.value === 'custom';
+        if (this.dom?.groupCountInput?.style) {
+          this.dom.groupCountInput.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && typeof this.dom.groupCountInput.focus === 'function') {
+            this.dom.groupCountInput.focus();
+          }
+        }
+        if (!isCustom && this.dom?.groupCountInput) {
+          this.dom.groupCountInput.value = this.dom.groupCountSelect.value;
         }
       });
     }
@@ -492,8 +511,19 @@ export class SidePanelController {
     const isFa = this.aiSettings.language === 'fa' ||
       (this.aiSettings.language === 'auto' && this.utils.detectLanguage && this.utils.detectLanguage(tabs) === 'fa');
 
+    const rawCount = this.aiSettings.groupCount ?? this.aiSettings.targetGroupCount;
+    const targetGroupCount = (typeof rawCount === 'number' && rawCount > 0)
+      ? rawCount
+      : (rawCount && rawCount !== 'auto' && !Number.isNaN(parseInt(rawCount, 10)) && parseInt(rawCount, 10) > 0
+          ? parseInt(rawCount, 10)
+          : null);
+
+    const initialStatusMsg = isFa
+      ? (targetGroupCount ? `در حال گروه‌بندی هوشمند تب‌ها در ${targetGroupCount} گروه...` : 'در حال گروه‌بندی هوشمند تب‌ها در کروم...')
+      : (targetGroupCount ? `Grouping Chrome tabs into ${targetGroupCount} groups with AI...` : 'Grouping Chrome tabs with AI...');
+
     this.showStatusBanner(
-      isFa ? 'در حال گروه‌بندی هوشمند تب‌ها در کروم...' : 'Grouping Chrome tabs with AI...',
+      initialStatusMsg,
       'info',
       0,
       10
@@ -512,7 +542,10 @@ export class SidePanelController {
       const grouperFn = this.utils.groupTabs || groupTabs;
       const result = await grouperFn(tabs, {
         ...this.aiSettings,
-        minGroupSize: Math.min(this.aiSettings.minGroupSize || 5, Math.floor(tabs.length / 2) || 1),
+        groupCount: targetGroupCount,
+        minGroupSize: targetGroupCount != null
+          ? Math.max(1, Math.min(this.aiSettings.minGroupSize || 5, Math.floor(tabs.length / targetGroupCount) || 1))
+          : Math.min(this.aiSettings.minGroupSize || 5, Math.floor(tabs.length / 2) || 1),
         maxNameLength: 5,
         unpinPinned: this.aiSettings.unpinPinned === true,
         onProgress: ({ percent, message }) => {
@@ -694,6 +727,30 @@ export class SidePanelController {
     if (this.dom?.languageSelect) {
       this.dom.languageSelect.value = this.aiSettings.language || 'auto';
     }
+    if (this.dom?.groupCountSelect) {
+      const currentCount = this.aiSettings.groupCount ?? 'auto';
+      const predefined = ['auto', '2', '3', '4', '5', '6', '7', '8'];
+      const strVal = String(currentCount);
+      if (predefined.includes(strVal)) {
+        this.dom.groupCountSelect.value = strVal;
+        if (this.dom?.groupCountInput) {
+          this.dom.groupCountInput.value = strVal === 'auto' ? '3' : strVal;
+          if (this.dom.groupCountInput.style) {
+            this.dom.groupCountInput.style.display = 'none';
+          }
+        }
+      } else {
+        this.dom.groupCountSelect.value = 'custom';
+        if (this.dom?.groupCountInput) {
+          this.dom.groupCountInput.value = strVal;
+          if (this.dom.groupCountInput.style) {
+            this.dom.groupCountInput.style.display = 'block';
+          }
+        }
+      }
+    } else if (this.dom?.groupCountInput) {
+      this.dom.groupCountInput.value = String(this.aiSettings.groupCount ?? 'auto');
+    }
     if (this.dom?.minGroupSizeSelect) {
       this.dom.minGroupSizeSelect.value = String(this.aiSettings.minGroupSize || 5);
     }
@@ -741,9 +798,37 @@ export class SidePanelController {
       }
     }
 
+    let groupCountVal = 'auto';
+    if (this.dom?.groupCountSelect) {
+      if (this.dom.groupCountSelect.value === 'custom') {
+        const parsed = parseInt(this.dom?.groupCountInput?.value, 10);
+        if (!Number.isNaN(parsed) && parsed >= 1) {
+          groupCountVal = parsed;
+        }
+      } else if (this.dom.groupCountSelect.value !== 'auto') {
+        const parsed = parseInt(this.dom.groupCountSelect.value, 10);
+        if (!Number.isNaN(parsed) && parsed >= 1) {
+          groupCountVal = parsed;
+        }
+      } else {
+        groupCountVal = 'auto';
+      }
+    } else if (this.dom?.groupCountInput) {
+      const val = this.dom.groupCountInput.value;
+      if (val === 'auto') {
+        groupCountVal = 'auto';
+      } else {
+        const parsed = parseInt(val, 10);
+        if (!Number.isNaN(parsed) && parsed >= 1) {
+          groupCountVal = parsed;
+        }
+      }
+    }
+
     const geminiModelEl = this.dom?.geminiModelInput || this.dom?.geminiModelSelect;
     this.aiSettings = {
       maxRecent: maxRecentVal,
+      groupCount: groupCountVal,
       provider: this.dom?.aiProviderSelect?.value || 'auto',
       geminiApiKey: this.dom?.geminiApiKeyInput?.value?.trim() || '',
       geminiModel: geminiModelEl?.value?.trim() || 'gemini-2.0-flash-lite',
@@ -756,12 +841,14 @@ export class SidePanelController {
     };
 
     this.recentTracker.maxSize = maxRecentVal;
+    this._updateAiGroupBtnTitle();
 
     if (this.chrome?.storage?.local) {
       try {
         await this.chrome.storage.local.set({
           moratab_ai_settings: this.aiSettings,
           moratab_max_recent: maxRecentVal,
+          moratab_group_count: groupCountVal,
         });
       } catch (err) {
         console.warn('Could not save settings to chrome.storage.local:', err);
@@ -770,6 +857,7 @@ export class SidePanelController {
       try {
         localStorage.setItem('moratab_ai_settings', JSON.stringify(this.aiSettings));
         localStorage.setItem('moratab_max_recent', String(maxRecentVal));
+        localStorage.setItem('moratab_group_count', String(groupCountVal));
       } catch {
         // ignore
       }
@@ -787,17 +875,24 @@ export class SidePanelController {
    */
   async loadAiSettings() {
     let loadedMaxRecent = null;
+    let loadedGroupCount = null;
     if (this.chrome?.storage?.local) {
       try {
-        const data = await this.chrome.storage.local.get(['moratab_ai_settings', 'moratab_max_recent']);
+        const data = await this.chrome.storage.local.get(['moratab_ai_settings', 'moratab_max_recent', 'moratab_group_count']);
         if (data?.moratab_ai_settings) {
           this.aiSettings = { ...this.aiSettings, ...data.moratab_ai_settings };
           if (data.moratab_ai_settings.maxRecent != null) {
             loadedMaxRecent = data.moratab_ai_settings.maxRecent;
           }
+          if (data.moratab_ai_settings.groupCount != null) {
+            loadedGroupCount = data.moratab_ai_settings.groupCount;
+          }
         }
         if (data?.moratab_max_recent != null) {
           loadedMaxRecent = data.moratab_max_recent;
+        }
+        if (data?.moratab_group_count != null) {
+          loadedGroupCount = data.moratab_group_count;
         }
       } catch {
         // ignore
@@ -811,10 +906,17 @@ export class SidePanelController {
           if (parsed?.maxRecent != null) {
             loadedMaxRecent = parsed.maxRecent;
           }
+          if (parsed?.groupCount != null) {
+            loadedGroupCount = parsed.groupCount;
+          }
         }
         const storedMax = localStorage.getItem('moratab_max_recent');
         if (storedMax != null) {
           loadedMaxRecent = Number(storedMax);
+        }
+        const storedGroupCount = localStorage.getItem('moratab_group_count');
+        if (storedGroupCount != null) {
+          loadedGroupCount = storedGroupCount === 'auto' ? 'auto' : Number(storedGroupCount);
         }
       } catch {
         // ignore
@@ -827,6 +929,33 @@ export class SidePanelController {
         this.aiSettings.maxRecent = num;
         this.recentTracker.maxSize = num;
       }
+    }
+
+    if (loadedGroupCount != null) {
+      if (loadedGroupCount === 'auto') {
+        this.aiSettings.groupCount = 'auto';
+      } else {
+        const countNum = parseInt(loadedGroupCount, 10);
+        if (!Number.isNaN(countNum) && countNum >= 1) {
+          this.aiSettings.groupCount = countNum;
+        }
+      }
+    }
+
+    this._updateAiGroupBtnTitle();
+  }
+
+  /**
+   * Updates the AI Group button title to reflect configured target groups.
+   * @private
+   */
+  _updateAiGroupBtnTitle() {
+    if (!this.dom?.aiGroupBtn?.setAttribute) return;
+    const count = this.aiSettings.groupCount;
+    if (typeof count === 'number' && count > 0) {
+      this.dom.aiGroupBtn.setAttribute('title', `Group all Chrome tabs into ${count} groups using AI`);
+    } else {
+      this.dom.aiGroupBtn.setAttribute('title', 'Group all Chrome tabs using on-device Gemma or AI API');
     }
   }
 

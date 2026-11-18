@@ -601,6 +601,10 @@ export class MockSidePanelDOM {
     this.ollamaEndpointInput = new MockElement('input', 'ollamaEndpointInput');
     this.ollamaModelInput = new MockElement('input', 'ollamaModelInput');
     this.languageSelect = new MockElement('select', 'languageSelect');
+    this.groupCountSelect = new MockElement('select', 'groupCountSelect');
+    this.groupCountSelect.value = 'auto';
+    this.groupCountInput = new MockElement('input', 'groupCountInput');
+    this.groupCountInput.value = '3';
     this.minGroupSizeSelect = new MockElement('select', 'minGroupSizeSelect');
     this.unpinPinnedCheckbox = new MockElement('input', 'unpinPinnedCheckbox');
     this.unpinPinnedCheckbox.checked = false;

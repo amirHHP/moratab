@@ -55,7 +55,7 @@
   - **High-Quality Naming & Bilingual Support**: Automatically names groups in fluent Persian or English depending on tab content (e.g. *"برنامه‌نویسی و کد"*, *"سرویس‌های گوگل"*, *"هوش مصنوعی و پژوهش"* or *"Development & Code"*, *"AI & Research"*).
   - **100% Tab Coverage Guarantee**: All tabs are strictly guaranteed to be assigned to a group. Pinned tabs can be automatically unpinned to ensure full grouping.
   - **Side Panel Group Badges**: Displays colored group pills directly on tabs in the Moratab side panel.
-  - **AI Settings Dialog (⚙️)**: Easily customize provider, API key, model, language, and unpinning options.
+  - **AI Settings Dialog (⚙️)**: Easily customize provider, API key, model, language, target number of groups (Auto or custom count), and unpinning options.
 
 - **R6. Donation & Project Support (حمایت مالی)**:
   - Convenient 1-click **Donate** button (`❤️`) located directly in the header toolbar.
